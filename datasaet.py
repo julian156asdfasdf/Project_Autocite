@@ -16,7 +16,6 @@ import tarfile
 import os
 
 
-
 def read_arxiv_papers(path):
     return pd.read_csv(path)
 
@@ -82,17 +81,21 @@ def rmv_non_tex_files(directory):
                 print(f"Removed non-tex file: {file_path}")
 
 
-
-
-
 # %%
-save_dir = Path("./papers")
-export_dir = Path("./tex_files")
+save_dir = Path("./.gitignore/papers")
+export_dir = Path("./.gitignore/tex_files")
+current_dir = os.path.dirname(os.path.abspath(__file__))
 #directory_path = r'/Users/julianoll/Desktop/Fagprojekt/Project_Autocite/papers'
 
 get_docs(save_dir, links)
 
 tex_docs(save_dir, export_dir)
 
-rmv_non_tex_files(export_dir)
+from data_count import count_ref
+
+bbl_count, bib_count = count_ref(export_dir)
+print(f"Number of .bbl files: {bbl_count}")
+print(f"Number of .bib files: {bib_count}")
+
+# rmv_non_tex_files(export_dir)
 
