@@ -53,7 +53,7 @@ def get_docs(dir ,links, k=40):
 def tex_docs(save_dir,export_dir):
     files = os.listdir(save_dir)
     for file_name in files:
-        if file_name[-4:]=='.tar':
+        if file_name[-4:].lower() =='.tar':
             try:
                 #creates a folder in the directory folder for each paper
                 tar_dir_name = os.path.splitext(file_name)[0] 
@@ -72,18 +72,40 @@ def tex_docs(save_dir,export_dir):
                 print(f"Error extracting {file_name}: {e}")
     
 
+def delete_empty_folders(root):
+
+    deleted = set()
+    
+    for current_dir, subdirs, files in os.walk(root, topdown=False):
+
+        still_has_subdirs = False
+        for subdir in subdirs:
+            if os.path.join(current_dir, subdir) not in deleted:
+                still_has_subdirs = True
+                break
+    
+        if not any(files) and not still_has_subdirs:
+            os.rmdir(current_dir)
+            deleted.add(current_dir)
+
+    return deleted
+
 def rmv_non_tex_files(directory):
     for root, dirs, files in os.walk(directory):
         for file in files:
-            if not file.lower().endswith(".tex"):
+            if not file.lower().endswith(".tex") and not file.lower().endswith(".bib") and not file.lower().endswith(".bbl"):
                 file_path = os.path.join(root, file)
                 os.remove(file_path)
                 print(f"Removed non-tex file: {file_path}")
+    delete_empty_folders(directory)
+
+
+
 
 
 # %%
-save_dir = Path("./.gitignore/papers")
-export_dir = Path("./.gitignore/tex_files")
+save_dir = Path("./papers")
+export_dir = Path("./tex_files")
 current_dir = os.path.dirname(os.path.abspath(__file__))
 #directory_path = r'/Users/julianoll/Desktop/Fagprojekt/Project_Autocite/papers'
 
@@ -99,3 +121,8 @@ print(f"Number of .bib files: {bib_count}")
 
 # rmv_non_tex_files(export_dir)
 
+
+
+# %%
+
+# %%
