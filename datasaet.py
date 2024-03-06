@@ -32,19 +32,16 @@ import random
 from data_count import count_ref
 
 
-def read_arxiv_papers(path):
-    return pd.read_csv(path)
-
-def get_eprint_link(paper):
-    return f'http://export.arxiv.org/e-print/{paper.arxiv_id}'
 
 def get_tar_links():
     """
     Gets links from downloaded arxiv-papers.csv.xz file and shuffles them with seed=42.
     """
+    def get_eprint_link(paper):
+        return f'http://export.arxiv.org/e-print/{paper.arxiv_id}'
     V1_URL = 'https://github.com/paperswithcode/axcell/releases/download/v1.0/'
     ARXIV_PAPERS_URL = V1_URL + 'arxiv-papers.csv.xz'
-    arxiv_papers = read_arxiv_papers(ARXIV_PAPERS_URL)
+    arxiv_papers = pd.read_csv(ARXIV_PAPERS_URL)
     arxiv_papers = arxiv_papers[arxiv_papers['status']=='success']
 
     links = list(arxiv_papers.apply(get_eprint_link, axis=1))
