@@ -27,6 +27,7 @@ import tarfile
 import os
 import tabulate
 from collections import defaultdict
+import random
 
 from data_count import count_ref
 
@@ -42,11 +43,12 @@ ARXIV_PAPERS_URL = V1_URL + 'arxiv-papers.csv.xz'
 arxiv_papers = read_arxiv_papers(ARXIV_PAPERS_URL)
 arxiv_papers = arxiv_papers[arxiv_papers['status']=='success']
 
-links = arxiv_papers.apply(get_eprint_link, axis=1)
+links = list(arxiv_papers.apply(get_eprint_link, axis=1))
 
+random.shuffle(links)
 # Specify the directory where you want to save the papers
 
-def get_docs(dir, links, k=100):
+def get_docs(dir, links, k=200):
     """
     Takes a directory and a list of links to papers and downloads the papers as .tar files to the directory.
     """
@@ -158,12 +160,13 @@ if __name__ == '__main__':
     export_dir = Path("./Processed_files")
     os.makedirs(export_dir, exist_ok=True)
 
-    # get_docs(save_dir, links)
+    get_docs(save_dir, links)
 
-    # unable_folder = tar_extractor(save_dir, export_dir)
+    unable_folder = tar_extractor(save_dir, export_dir)
 
     dir = rmv_irrelevant_files(export_dir)
 
     bbl_count, bib_count = count_ref(export_dir)
     print(f"Number of .bbl files: {bbl_count}")
     print(f"Number of .bib files: {bib_count}")
+# %%
