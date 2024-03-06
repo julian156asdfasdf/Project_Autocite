@@ -12,7 +12,7 @@ def count_ref(directory):
     bbl_count = 0
     bib_count = 0
 
-    for root, dirs, files in os.walk(directory):
+    for _, _, files in os.walk(directory):
         for file in files:
             if file.endswith(".bbl"):
                 bbl_count += 1

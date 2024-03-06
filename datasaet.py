@@ -19,8 +19,6 @@ This program does the following:
  - Counts the total number of .bib and .bbl files in dataset
 '''
 
-
-
 # %%
 from pathlib import Path
 import pandas as pd
@@ -46,10 +44,7 @@ arxiv_papers = arxiv_papers[arxiv_papers['status']=='success']
 
 links = arxiv_papers.apply(get_eprint_link, axis=1)
 
-
-#%%
 # Specify the directory where you want to save the papers
-
 
 def get_docs(dir, links, k=100):
     """
@@ -68,7 +63,7 @@ def get_docs(dir, links, k=100):
         else:
             print(f"Failed to download {link}")
 
-
+#%%
 def tar_extractor(save_dir,export_dir):
     """
     Takes a Papers directory and extracts the contents of the .tar files into a new directory called tex_files. In the tex_files directory
@@ -150,31 +145,25 @@ def rmv_irrelevant_files(directory):
                 print(f"Removed non-tex file: {file_path}")
     delete_empty_folders(directory)
     
-    with open("output.txt", 'w') as f:
+    with open("manifest.txt", 'w') as f:
         f.write(tabulate.tabulate(del_dict, headers='keys'))
     return del_dict
 
 
 # %%
-save_dir = Path("./papers")
-os.makedirs(save_dir, exist_ok=True)
-export_dir = Path("./Processed_files")
-os.makedirs(export_dir, exist_ok=True)
 
-#get_docs(save_dir, links)
+if __name__ == '__main__':
+    save_dir = Path("./papers")
+    os.makedirs(save_dir, exist_ok=True)
+    export_dir = Path("./Processed_files")
+    os.makedirs(export_dir, exist_ok=True)
 
-unable_folder = tar_extractor(save_dir, export_dir)
+    # get_docs(save_dir, links)
 
-dir = rmv_irrelevant_files(export_dir)
+    # unable_folder = tar_extractor(save_dir, export_dir)
 
+    dir = rmv_irrelevant_files(export_dir)
 
-#%%
-
-
-bbl_count, bib_count = count_ref(export_dir)
-print(f"Number of .bbl files: {bbl_count}")
-print(f"Number of .bib files: {bib_count}")
-
-# rmv_non_tex_files(export_dir)
-
-# %%
+    bbl_count, bib_count = count_ref(export_dir)
+    print(f"Number of .bbl files: {bbl_count}")
+    print(f"Number of .bib files: {bib_count}")
