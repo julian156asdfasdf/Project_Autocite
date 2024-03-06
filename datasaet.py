@@ -74,6 +74,8 @@ def tex_docs(save_dir,export_dir):
             except tarfile.ReadError as e:
                 print(f"Error extracting {file_name}: {e}")
                 unable_folder.add(file_name)
+    with open("output_tar_unable_folders.txt", 'w') as f:
+        f.write(str(unable_folder))
     return unable_folder
     
 
@@ -95,7 +97,8 @@ def delete_empty_folders(root):
         if not any(files) and not still_has_subdirs:
             os.rmdir(current_dir)
             deleted.add(current_dir)
-
+    with open("output_deleted_empty_folders.txt", 'w') as f:
+        f.write(str(deleted))
     return deleted
 
 def rmv_non_tex_files(directory):
@@ -113,10 +116,10 @@ def rmv_non_tex_files(directory):
                 del_dict[root[10:21]].add(file)
                 print(f"Removed non-tex file: {file_path}")
     delete_empty_folders(directory)
+    
+    with open("output.txt", 'w') as f:
+        f.write(tabulate.tabulate(dir, headers='keys'))
     return del_dict
-
-
-
 
 
 # %%
@@ -130,19 +133,8 @@ get_docs(save_dir, links)
 unable_folder = tex_docs(save_dir, export_dir)
 
 dir = rmv_non_tex_files(export_dir)
-#%%
-s = tabulate.tabulate(dir, headers='keys')
-with open("output.txt", 'w') as f:
-   f.write(s)
 
-#%%
-with open("output3.txt", 'w') as f:
-   f.write(str(dir))  
 
-with open("output2.txt", 'w') as f:
-   f.write(str(unable_folder))
-
-   
 #%%
 from data_count import count_ref
 
