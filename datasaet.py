@@ -30,20 +30,14 @@ import os
 import tabulate
 from collections import defaultdict
 
+from data_count import count_ref
+
 
 def read_arxiv_papers(path):
     return pd.read_csv(path)
 
 def get_eprint_link(paper):
     return f'http://export.arxiv.org/e-print/{paper.arxiv_id}'
-
-def download_paper(url, path):
-    response = requests.get(url)
-    if response.status_code == 200:
-        with open(path, 'wb') as f:
-            f.write(response.content)
-    else:
-        print(f"Failed to download {url}")
 
 V1_URL = 'https://github.com/paperswithcode/axcell/releases/download/v1.0/'
 ARXIV_PAPERS_URL = V1_URL + 'arxiv-papers.csv.xz'
@@ -57,15 +51,29 @@ links = arxiv_papers.apply(get_eprint_link, axis=1)
 # Specify the directory where you want to save the papers
 
 
-def get_docs(dir ,links, k=100):
+def get_docs(dir, links, k=100):
+    """
+    Takes a directory and a list of links to papers and downloads the papers as .tar files to the directory.
+    """
     for idx, link in enumerate(links[:k], start=1):  # Just an example with `.tail()`, remove it to download all
         paper_id = arxiv_papers.iloc[idx - 1].arxiv_id  # Adjust index if necessary
         file_path = dir / f"{paper_id}.tar"
-        print(f"Downloading {paper_id} to {file_path}...")
-        download_paper(link, file_path)
+        print(f"Downloading {paper_id} to {file_path}... " + str(idx) + "/" + str(k))
+
+        # Download a paper from the given URL and save it to the given path.
+        response = requests.get(link)
+        if response.status_code == 200:
+            with open(file_path, 'wb') as f:
+                f.write(response.content)
+        else:
+            print(f"Failed to download {link}")
 
 
-def tex_docs(save_dir,export_dir):
+def tar_extractor(save_dir,export_dir):
+    """
+    Takes a Papers directory and extracts the contents of the .tar files into a new directory called tex_files. In the tex_files directory
+    there will a subfolder for each paper containing the contents of the corresponding .tar file.
+    """
     unable_folder = set()
     files = os.listdir(save_dir)
     for file_name in files:
@@ -81,18 +89,24 @@ def tex_docs(save_dir,export_dir):
                     tar.extractall(path=tar_dir_path)
                 #os.remove(os.path.join(save_dir, file_name))
 
-
-
                 print(f"{file_name} extracted successfully to {tar_dir_path}.")
             except tarfile.ReadError as e:
                 print(f"Error extracting {file_name}: {e}")
                 unable_folder.add(file_name)
     with open("output_tar_unable_folders.txt", 'w') as f:
         f.write(str(unable_folder))
-    return unable_folder
-    
+    return unable_folder    
 
 def delete_empty_folders(root):
+    """
+    A helper function for the rmv_irrelevant_files-function to delete empty folders in the directory tree after removing irrelevant files.
+
+    Arguments:
+    root: The root directory of the directory tree to be checked for empty folders. (The Processed folder)
+
+    Returns:
+    A set of the deleted folders.
+    """
 
     deleted = set()
     
@@ -114,10 +128,16 @@ def delete_empty_folders(root):
         f.write(str(deleted))
     return deleted
 
-def rmv_non_tex_files(directory):
-    del_dict = {}
-    for dir in os.listdir(directory):
-        del_dict[dir] = set()
+def rmv_irrelevant_files(directory):
+    """
+    Removes irrelevant files from the directory tree (The Processed Folder). The function removes all files that are not .tex, .bib or .bbl files.
+
+    Arguments:
+    directory: The root directory of the directory tree to be checked for irrelevant files. (The Processed folder)
+
+    Returns: 
+    A dictionary with the deleted files and their corresponding paper ID.
+    """
 
     del_dict = defaultdict(lambda:set())
 
@@ -126,7 +146,7 @@ def rmv_non_tex_files(directory):
             if not file.lower().endswith(".tex") and not file.lower().endswith(".bib") and not file.lower().endswith(".bbl"):
                 file_path = os.path.join(root, file)
                 os.remove(file_path)
-                del_dict[root[10:21]].add(file)
+                del_dict[root[16:27]].add(file)
                 print(f"Removed non-tex file: {file_path}")
     delete_empty_folders(directory)
     
@@ -137,19 +157,19 @@ def rmv_non_tex_files(directory):
 
 # %%
 save_dir = Path("./papers")
-export_dir = Path("./tex_files")
-current_dir = os.path.dirname(os.path.abspath(__file__))
-#directory_path = r'/Users/julianoll/Desktop/Fagprojekt/Project_Autocite/papers'
+os.makedirs(save_dir, exist_ok=True)
+export_dir = Path("./Processed_files")
+os.makedirs(export_dir, exist_ok=True)
 
-get_docs(save_dir, links)
+#get_docs(save_dir, links)
 
-unable_folder = tex_docs(save_dir, export_dir)
+unable_folder = tar_extractor(save_dir, export_dir)
 
-dir = rmv_non_tex_files(export_dir)
+dir = rmv_irrelevant_files(export_dir)
 
 
 #%%
-from data_count import count_ref
+
 
 bbl_count, bib_count = count_ref(export_dir)
 print(f"Number of .bbl files: {bbl_count}")
