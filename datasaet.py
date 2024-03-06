@@ -38,14 +38,21 @@ def read_arxiv_papers(path):
 def get_eprint_link(paper):
     return f'http://export.arxiv.org/e-print/{paper.arxiv_id}'
 
-V1_URL = 'https://github.com/paperswithcode/axcell/releases/download/v1.0/'
-ARXIV_PAPERS_URL = V1_URL + 'arxiv-papers.csv.xz'
-arxiv_papers = read_arxiv_papers(ARXIV_PAPERS_URL)
-arxiv_papers = arxiv_papers[arxiv_papers['status']=='success']
+def get_tar_links():
+    """
+    Gets links from downloaded arxiv-papers.csv.xz file and shuffles them with seed=42.
+    """
+    V1_URL = 'https://github.com/paperswithcode/axcell/releases/download/v1.0/'
+    ARXIV_PAPERS_URL = V1_URL + 'arxiv-papers.csv.xz'
+    arxiv_papers = read_arxiv_papers(ARXIV_PAPERS_URL)
+    arxiv_papers = arxiv_papers[arxiv_papers['status']=='success']
 
-links = list(arxiv_papers.apply(get_eprint_link, axis=1))
+    links = list(arxiv_papers.apply(get_eprint_link, axis=1))
+    random.shuffle(links, seed=42)
+    
+    return links
 
-random.shuffle(links)
+
 # Specify the directory where you want to save the papers
 
 def get_docs(dir, links, k=200):
@@ -160,7 +167,9 @@ if __name__ == '__main__':
     export_dir = Path("./Processed_files")
     os.makedirs(export_dir, exist_ok=True)
 
-    get_docs(save_dir, links)
+    tar_links = get_tar_links()
+
+    get_docs(save_dir, tar_links)
 
     unable_folder = tar_extractor(save_dir, export_dir)
 
