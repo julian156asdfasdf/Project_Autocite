@@ -45,17 +45,19 @@ def get_tar_links():
     arxiv_papers = arxiv_papers[arxiv_papers['status']=='success']
 
     links = list(arxiv_papers.apply(get_eprint_link, axis=1))
-    random.shuffle(links, seed=42)
+    random.seed(42)
+    random.shuffle(links)
     
-    return links
+    return links, arxiv_papers
 
 
 # Specify the directory where you want to save the papers
 
-def get_docs(dir, links, k=200):
+def get_docs(dir, links, arxiv_papers, k=2):
     """
     Takes a directory and a list of links to papers and downloads the papers as .tar files to the directory.
     """
+
     for idx, link in enumerate(links[:k], start=1):  # Just an example with `.tail()`, remove it to download all
         paper_id = arxiv_papers.iloc[idx - 1].arxiv_id  # Adjust index if necessary
         file_path = dir / f"{paper_id}.tar"
@@ -164,9 +166,9 @@ if __name__ == '__main__':
     export_dir = Path("./Processed_files")
     os.makedirs(export_dir, exist_ok=True)
 
-    tar_links = get_tar_links()
+    tar_links, arxiv_papers = get_tar_links()
 
-    get_docs(save_dir, tar_links)
+    get_docs(save_dir, tar_links, arxiv_papers)
 
     unable_folder = tar_extractor(save_dir, export_dir)
 
