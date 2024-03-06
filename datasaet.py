@@ -8,6 +8,19 @@
 
 # udgangspunkt https://www.kaggle.com/datasets/Cornell-University/arxiv
 
+
+'''
+This program does the following:
+ - Gets a subset of computer science arXiv articles, as a list
+ - Downloads a subset of that dataset as tar files in local directory folder papers
+ - unpacks tar files from papers, taking only tex, .bib and .bbl files to new directory tex_files
+ - Displays the other files as a table, for each article ID
+ - Displays tar files that could not be unpacked
+ - Counts the total number of .bib and .bbl files in dataset
+'''
+
+
+
 # %%
 from pathlib import Path
 import pandas as pd
@@ -44,7 +57,7 @@ links = arxiv_papers.apply(get_eprint_link, axis=1)
 # Specify the directory where you want to save the papers
 
 
-def get_docs(dir ,links, k=5):
+def get_docs(dir ,links, k=100):
     for idx, link in enumerate(links[:k], start=1):  # Just an example with `.tail()`, remove it to download all
         paper_id = arxiv_papers.iloc[idx - 1].arxiv_id  # Adjust index if necessary
         file_path = dir / f"{paper_id}.tar"
@@ -118,7 +131,7 @@ def rmv_non_tex_files(directory):
     delete_empty_folders(directory)
     
     with open("output.txt", 'w') as f:
-        f.write(tabulate.tabulate(dir, headers='keys'))
+        f.write(tabulate.tabulate(del_dict, headers='keys'))
     return del_dict
 
 
@@ -143,3 +156,5 @@ print(f"Number of .bbl files: {bbl_count}")
 print(f"Number of .bib files: {bib_count}")
 
 # rmv_non_tex_files(export_dir)
+
+# %%
