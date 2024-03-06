@@ -14,6 +14,8 @@ import pandas as pd
 import requests
 import tarfile
 import os
+import tabulate
+from collections import defaultdict
 
 
 def read_arxiv_papers(path):
@@ -51,6 +53,7 @@ def get_docs(dir ,links, k=5):
 
 
 def tex_docs(save_dir,export_dir):
+    unable_folder = set()
     files = os.listdir(save_dir)
     for file_name in files:
         if file_name[-4:].lower() =='.tar':
@@ -70,6 +73,8 @@ def tex_docs(save_dir,export_dir):
                 print(f"{file_name} extracted successfully to {tar_dir_path}.")
             except tarfile.ReadError as e:
                 print(f"Error extracting {file_name}: {e}")
+                unable_folder.add(file_name)
+    return unable_folder
     
 
 def delete_empty_folders(root):
@@ -95,24 +100,20 @@ def delete_empty_folders(root):
 
 def rmv_non_tex_files(directory):
     del_dict = {}
-    del_files_path = Path("./del_files")
     for dir in os.listdir(directory):
-        os.makedirs(os.path.join(del_files_path, dir),exist_ok=True)
         del_dict[dir] = set()
 
+    del_dict = defaultdict(lambda:set())
 
     for root, dirs, files in os.walk(directory):
-        print('root', root)
-        print('dirs', dirs)
-        print('files', files)
         for file in files:
-
             if not file.lower().endswith(".tex") and not file.lower().endswith(".bib") and not file.lower().endswith(".bbl"):
                 file_path = os.path.join(root, file)
                 os.remove(file_path)
+                del_dict[root[10:21]].add(file)
                 print(f"Removed non-tex file: {file_path}")
     delete_empty_folders(directory)
-    return del_dict[dir]
+    return del_dict
 
 
 
@@ -126,11 +127,22 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 
 get_docs(save_dir, links)
 
-tex_docs(save_dir, export_dir)
+unable_folder = tex_docs(save_dir, export_dir)
+
+dir = rmv_non_tex_files(export_dir)
+#%%
+s = tabulate.tabulate(dir, headers='keys')
+with open("output.txt", 'w') as f:
+   f.write(s)
 
 #%%
-dir = rmv_non_tex_files(export_dir)
+with open("output3.txt", 'w') as f:
+   f.write(str(dir))  
 
+with open("output2.txt", 'w') as f:
+   f.write(str(unable_folder))
+
+   
 #%%
 from data_count import count_ref
 
@@ -139,13 +151,3 @@ print(f"Number of .bbl files: {bbl_count}")
 print(f"Number of .bib files: {bib_count}")
 
 # rmv_non_tex_files(export_dir)
-
-
-
-data = {'ID': ['bob', 'lis'], 'Deleted_documents': [14, 16], 'girth': [15,16]}
-import tabulate
-s = tabulate.tabulate(data, headers='keys')
-print(s)
-with open("output.txt", 'w') as f:
-   f.write(s)
-# %%
