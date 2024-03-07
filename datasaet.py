@@ -30,6 +30,7 @@ from collections import defaultdict
 import random
 
 from data_count import count_ref
+from merge_tex_files import tex_merge
 
 
 
@@ -162,19 +163,19 @@ def rmv_irrelevant_files(directory):
 
 if __name__ == '__main__':
     save_dir = Path("./papers")
-    os.makedirs(save_dir, exist_ok=True)
     export_dir = Path("./Processed_files")
-    os.makedirs(export_dir, exist_ok=True)
+    
+    if os.path.exists(save_dir) == False:
+        os.makedirs(save_dir, exist_ok=True)
+        tar_links, arxiv_papers = get_tar_links()
+        get_docs(save_dir, tar_links, arxiv_papers)
 
-    tar_links, arxiv_papers = get_tar_links()
-
-    get_docs(save_dir, tar_links, arxiv_papers)
-
-    unable_folder = tar_extractor(save_dir, export_dir)
-
-    dir = rmv_irrelevant_files(export_dir)
-
+    if os.path.exists(export_dir) == False:
+        os.makedirs(export_dir, exist_ok=True)
+        tar_extractor(save_dir, export_dir)
+        rmv_irrelevant_files(export_dir)
+        tex_merge(export_dir)
+    
     bbl_count, bib_count = count_ref(export_dir)
     print(f"Number of .bbl files: {bbl_count}")
     print(f"Number of .bib files: {bib_count}")
-# %%
