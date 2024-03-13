@@ -44,7 +44,8 @@ class BibItem:
         if bib_string.split(r"\bibinfo"):
             self._parse_bib_info_lines(bib_string)
 
-    def _parse_bib_info_lines(self, bib_string):    
+    def _parse_bib_info_lines(self, bib_string):
+    
         bib_info_lines = bib_string.split(r"\bibinfo")[1:]
         if bib_info_lines:
             print('heya')
@@ -79,10 +80,10 @@ class BibItem:
     def __str__(self) -> str:
         final_str = ""
         for key, value in self.info.items():
-            if key:
+            if key == "authors":
                 final_str += "".join(value)
             else:
-                final_str += f"{value}"
+                final_str += f"{key}, {value}"
         # Replace duplicate spaces
         final_str = re.sub(r"\s+", " ", final_str)
         return final_str
@@ -91,7 +92,7 @@ class BibItem:
         return f"BibItem({self.key}, {self.bib_id})"
 
     def __getitem__(self, key: str) -> Union[str, list[str]]:
-        return self.info[key]
+        return self.info[key], key
 
 
 
