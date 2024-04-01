@@ -29,10 +29,6 @@ import tabulate
 from collections import defaultdict
 import random
 
-from data_count import count_ref
-from merge_tex_files import tex_merge
-
-
 
 def get_tar_links():
     """
@@ -174,8 +170,3 @@ if __name__ == '__main__':
         os.makedirs(export_dir, exist_ok=True)
         tar_extractor(save_dir, export_dir)
         rmv_irrelevant_files(export_dir)
-        tex_merge(export_dir)
-    
-    bbl_count, bib_count = count_ref(export_dir)
-    print(f"Number of .bbl files: {bbl_count}")
-    print(f"Number of .bib files: {bib_count}")
