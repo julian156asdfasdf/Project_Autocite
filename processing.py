@@ -144,6 +144,23 @@ class processing:
         print("Merged all tex files into main.tex for each paper")
 
 
+    def create_references_json(self):
+        """
+        parsed_bib_files = [] # List of dictionaries
+        parsed_bbl_files = [] # List of dictionaries
+
+        for each .bib file:
+            parsed_bib_files.append(parse_bib(bib_file))
+        for each .bbl file:
+            parsed_bbl_files.append(parse_bbl(bbl_file))
+        
+        Combine the parsed_bib_files and parsed_bbl_files into a single dictionary
+
+        Create json file containing the combined dictionary
+        
+        delete all the .bib and .bbl files from folder
+        """
+
 ### IF TIME, ADD THIS FUNCTIONALITY ###
 
 # # Write a manifest of the merged files if manifest == True
