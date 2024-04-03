@@ -9,9 +9,9 @@ class processing:
         self.did_merge = False
         
         
-    def create_step_1_folder(self):
+    def create_step_2_folder(self):
         """
-        Creates a "step_1" folder outside the directory specified by self.data,
+        Creates a "step_2" folder outside the directory specified by self.data,
         copying the directory structure but without any files.
 
         Arguments:
@@ -21,21 +21,21 @@ class processing:
         None
         """
         base_folder = os.path.dirname(self.data)
-        step_1_folder = os.path.join(base_folder, "step_1")
-        if not os.path.exists(step_1_folder):
+        step_2_folder = os.path.join(base_folder, "step_2")
+        if not os.path.exists(step_2_folder):
             for root, dirs, files in os.walk(self.data):
                 relative_path = os.path.relpath(root, self.data)
-                new_folder = os.path.join(step_1_folder, relative_path)
+                new_folder = os.path.join(step_2_folder, relative_path)
                 os.makedirs(new_folder)
-            print(f"Created folder: 'step_1' in {base_folder}")
+            print(f"Created folder: 'step_2' in {base_folder}")
         else:
-            print("The step_1 folder already exists.")
+            print("The step_2 folder already exists.")
     
     
     def move_references(self):
         """
         Copies the references of .bbl and .bib files already in the self.data directory
-        into the step_1 directory and renames them as ref.bbl or ref.bib depending on the format.
+        into the step_2 directory and renames them as ref.bbl or ref.bib depending on the format.
 
         Arguments:
         None
@@ -45,12 +45,12 @@ class processing:
         """
         count = 0
         base_folder = os.path.dirname(self.data)
-        step_1_folder = os.path.join(base_folder, "step_1")
+        step_2_folder = os.path.join(base_folder, "step_2")
         for root, dirs, files in os.walk(self.data):
             for file in files:
                 if file.lower().endswith((".bbl", ".bib")):
                     source_path = os.path.join(root, file)
-                    destination_folder = os.path.join(step_1_folder, os.path.relpath(root, self.data))
+                    destination_folder = os.path.join(step_2_folder, os.path.relpath(root, self.data))
                     os.makedirs(destination_folder, exist_ok=True)
                     if file.lower().endswith(".bbl"):
                         destination_path = os.path.join(destination_folder, "ref.bbl")
@@ -58,7 +58,7 @@ class processing:
                         destination_path = os.path.join(destination_folder, "ref.bib")
                     shutil.copy(source_path, destination_path)
                     count += 1
-        print(f"Moved {count} already established references to step_1 folder")
+        print(f"Moved {count} already established references to step_2 folder")
 
 
     def extract_references(self):
@@ -92,9 +92,9 @@ class processing:
                         # Extract the bibliography section
                         bibliography_section = tex_content[start_index:end_index + len(r"\end{thebibliography}")]
                     
-                        # Write the bibliography section to the ref.bbl file in the step_1 folder
-                        step_1_folder = os.path.join(os.path.dirname(self.data), "step_1")
-                        new_folder = os.path.join(step_1_folder, os.path.relpath(root, self.data))
+                        # Write the bibliography section to the ref.bbl file in the step_2 folder
+                        step_2_folder = os.path.join(os.path.dirname(self.data), "step_2")
+                        new_folder = os.path.join(step_2_folder, os.path.relpath(root, self.data))
                         os.makedirs(new_folder, exist_ok=True)
                         with open(os.path.join(new_folder, "ref.bbl"), 'w') as f:
                             f.write(bibliography_section)
@@ -135,9 +135,9 @@ class processing:
                     if ref_start != -1 and ref_start != -1:
                         tex_content = tex_content[:ref_start] + tex_content[ref_end + len(r"\end{thebibliography}"):]
                     
-                    # Append for every .tex file the tex_content to the main.tex file in the step_1 folder
-                    step_1_folder = os.path.join(os.path.dirname(self.data), "step_1")
-                    new_folder = os.path.join(step_1_folder, os.path.relpath(root, self.data))
+                    # Append for every .tex file the tex_content to the main.tex file in the step_2 folder
+                    step_2_folder = os.path.join(os.path.dirname(self.data), "step_2")
+                    new_folder = os.path.join(step_2_folder, os.path.relpath(root, self.data))
                     os.makedirs(new_folder, exist_ok=True)
                     with open(os.path.join(new_folder, "main.tex"), 'a') as f:
                         f.write(tex_content)
@@ -156,7 +156,7 @@ class processing:
 if __name__ == "__main__":
     directory = "./processed_tiles" # a dummy directory for testing
     process = processing(directory)
-    process.create_step_1_folder()
+    process.create_step_2_folder()
     process.move_references()
     process.extract_references()
     process.merge_tex_files()
