@@ -1,5 +1,6 @@
 import os
 from collections import defaultdict
+from pylatexenc.latexwalker import LatexWalker
 import shutil
 
 class processing:
@@ -47,15 +48,21 @@ class processing:
         base_folder = os.path.dirname(self.data)
         step_2_folder = os.path.join(base_folder, "step_2")
         for root, dirs, files in os.walk(self.data):
+            i_bib = 1
+            i_bbl = 1
             for file in files:
                 if file.lower().endswith((".bbl", ".bib")):
                     source_path = os.path.join(root, file)
                     destination_folder = os.path.join(step_2_folder, os.path.relpath(root, self.data))
                     os.makedirs(destination_folder, exist_ok=True)
                     if file.lower().endswith(".bbl"):
-                        destination_path = os.path.join(destination_folder, "ref.bbl")
+                        new_file_name = f"ref_{i_bbl}.bbl"
+                        destination_path = os.path.join(destination_folder, new_file_name)
+                        i_bbl += 1
                     elif file.lower().endswith(".bib"):
-                        destination_path = os.path.join(destination_folder, "ref.bib")
+                        new_file_name = f"ref_{i_bib}.bib"
+                        destination_path = os.path.join(destination_folder, new_file_name)
+                        i_bib += 1
                     shutil.copy(source_path, destination_path)
                     count += 1
         print(f"Moved {count} already established references to step_2 folder")
@@ -116,10 +123,25 @@ class processing:
         if self.did_merge:
             print("The tex files have already been merged.")
             return
-        
-        self.did_merge = True
-        
+        errors = 0
         for root, dirs, files in os.walk(self.data):
+            doc_class_n = 0
+            for file in files:
+                if file.lower().endswith(".tex"):
+                    with open(os.path.join(root, file), 'r') as f:
+                        w = LatexWalker(f.read())
+                        (nodelist, pos, len_) = w.get_latex_nodes(pos=0)
+                        print(root+file)
+                        if nodelist[0].macroname == "documentclass":
+                            doc_class_n += 1
+            print(doc_class_n)
+            if doc_class_n > 1:
+                print(f"Error: More than one documentclass in {root}")
+                errors += 1
+        print(errors)
+        """
+        for root, dirs, files in os.walk(self.data):
+            doc_class_n = 0
             for file in files:
                 if file.lower().endswith(".tex"):
                     with open(os.path.join(root, file), 'r') as f:
@@ -142,6 +164,7 @@ class processing:
                     with open(os.path.join(new_folder, "main.tex"), 'a') as f:
                         f.write(tex_content)
         print("Merged all tex files into main.tex for each paper")
+        self.did_merge = True"""
 
 
     def create_references_json(self):
@@ -171,7 +194,7 @@ class processing:
 #             f.write(tabulate.tabulate(error_dict, headers='keys'))
 
 if __name__ == "__main__":
-    directory = "./processed_tiles" # a dummy directory for testing
+    directory = "./processed_files" # a dummy directory for testing
     process = processing(directory)
     process.create_step_2_folder()
     process.move_references()
