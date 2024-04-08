@@ -6,35 +6,35 @@ import os
 import tabulate
 
 def delete_empty_folders(root):
-        """
-        A helper function for the rmv_irrelevant_files-function to delete empty folders in the directory tree after removing irrelevant files.
+    """
+    A helper function for the rmv_irrelevant_files-function to delete empty folders in the directory tree after removing irrelevant files.
 
-        Arguments:
-        root: The root directory of the directory tree to be checked for empty folders. (The Processed folder)
+    Arguments:
+    root: The root directory of the directory tree to be checked for empty folders. (The Processed folder)
 
-        Returns:
-        A set of the deleted folders.
-        """
+    Returns:
+    A set of the deleted folders.
+    """
 
-        deleted = set()
-        
-        for current_dir, subdirs, files in os.walk(root, topdown=False):
-            #print(current_dir)
-            #print(subdirs)
-            #print(files)
+    deleted = set()
+    
+    for current_dir, subdirs, files in os.walk(root, topdown=False):
+        #print(current_dir)
+        #print(subdirs)
+        #print(files)
 
-            still_has_subdirs = False
-            for subdir in subdirs:
-                if os.path.join(current_dir, subdir) not in deleted:
-                    still_has_subdirs = True
-                    break
-        
-            if not any(files) and not still_has_subdirs:
-                os.rmdir(current_dir)
-                deleted.add(current_dir)
-        with open("output_deleted_empty_folders.txt", 'w') as f:
-            f.write(str(deleted))
-        return deleted
+        still_has_subdirs = False
+        for subdir in subdirs:
+            if os.path.join(current_dir, subdir) not in deleted:
+                still_has_subdirs = True
+                break
+    
+        if not any(files) and not still_has_subdirs:
+            os.rmdir(current_dir)
+            deleted.add(current_dir)
+    with open("output_deleted_empty_folders.txt", 'w') as f:
+        f.write(str(deleted))
+    return deleted
 
 
 class step1_processing:
@@ -65,8 +65,7 @@ class step1_processing:
                     with tarfile.open(os.path.join(self.data, file_name), 'r') as tar:
                         tar.extractall(path=tar_dir_path)
                     #os.remove(os.path.join(self.data, file_name))
-
-                    print(f"{file_name} extracted successfully to {tar_dir_path}.")
+                    # print(f"{file_name} extracted successfully to {tar_dir_path}.")
                 except tarfile.ReadError as e:
                     print(f"Error extracting {file_name}: {e}")
                     unable_folder.add(file_name)

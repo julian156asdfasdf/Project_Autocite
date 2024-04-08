@@ -1,9 +1,12 @@
 import os
+import json
 from collections import defaultdict
 from step1_processing import delete_empty_folders
 from pathlib import Path
 import re
 import shutil
+from parseBib import parseBib
+
 
 class step2_processing:
     def __init__(self, directory, target_name):
@@ -238,22 +241,55 @@ class step2_processing:
         
         delete all the .bib and .bbl files from folder
         """
-### IF TIME, ADD THIS FUNCTIONALITY ###
+        
+        # Walk through directory
+        for root, dirs, files in os.walk(self.target):
+            parsed_bib_files = {}
+            parsed_bbl_files = {}
 
-# # Write a manifest of the merged files if manifest == True
-#     if manifest:
-#         with open("Merge_manifest.txt", 'w') as f:
-#             f.write(tabulate.tabulate(merge_dict, headers='keys'))
-#         with open("Merge_error_log.txt", 'w') as f:
-#             f.write(tabulate.tabulate(error_dict, headers='keys'))
+            for file in files:
+                if file.lower().endswith(".bib"):
+                    with open(os.path.join(root, file), 'r', encoding=self.encoder) as f:
+                        bib_content = f.read()
+                        
+                        # Parse the .bib file and append it to the list
+                        parsed_bib_files.update(parseBib(bib_content))
+                        
+                elif file.lower().endswith(".bbl"):
+                    with open(os.path.join(root, file), 'r', encoding=self.encoder) as f:
+                        bbl_content = f.read()
+                        
+                        # Parse the .bbl file and append it to the list
+                        parsed_bbl_files.update(parseBbl(bbl_content))
+            
+            if root is self.target:
+                continue
+
+            # Combine the parsed files into one dictionary
+            combined_dict = {**parsed_bib_files, **parsed_bbl_files}
+            
+            # Add 'arXiv-id' and 'abstract' keys to the dictionary
+            for key in combined_dict.keys():
+                combined_dict[key] = {**combined_dict[key], **{'arXiv-id': None, 'abstract': None}}
+            
+            # Make combined dictionary into a .json file
+            with open(os.path.join(root, "references.json"), 'w') as f:
+                json.dump(combined_dict, f)
+            
+            # Delete all .bib and .bbl files from the folder
+            for file in files:
+                if file.lower().endswith((".bib", ".bbl")):
+                    os.remove(os.path.join(root, file))
+
+        print("Created references.json file and removed all .bib and .bbl files.")
+    
 
 if __name__ == "__main__":
     process = step2_processing("Processed_files", "Step_2")
     process.create_target_folder()
-    #process.merge_tex_files()
+    process.merge_tex_files()
     process.extract_references()
     process.remove_bib_from_main()
     process.move_references() 
     delete_empty_folders(process.target)
     process.create_references_json()
-    
