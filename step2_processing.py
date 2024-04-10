@@ -37,9 +37,9 @@ class step2_processing:
             print(f"The {self.target} folder already exists.")
     
 
-    def merge_tex_files(self):
+    def merge_tex_files(self, root, files):
         """
-        Merges all the tex files in each subdirectory into one file called main.tex in the step_2 folder.
+        Merges all the tex files in a subdirectory into one file called main.tex in the step_2 folder.
 
         Arguments:
         None
@@ -48,87 +48,205 @@ class step2_processing:
         None
         """
 
-        
-        prev_root = "sdfgdgdfjsdfg"
-        for root, dirs, files in os.walk(self.data):
-            if Path("./"+root) == self.data or prev_root in root:
-                continue
-            prev_root = root
+        def clean_tex_string(tex_string):
+            """
+            Cleans the tex string by removing all comments.
 
-            # Check if there is only one \documentclass in the folder
-            doc_class_n = 0
-            doc_main = None
-            for file in files:
-                if file.lower().endswith(".tex"): 
-                    with open(os.path.join(root, file), 'r', encoding=self.encoder) as f:  # Encoding is ISO-8859-1. The only working encoder for latex.
-                        try:
-                            content = str(f.read())
-                            if r"\documentclass" in content:
-                                all_dc_idx = [m.start() for m in re.finditer(r"\\documentclass", content)]
-                                for m in re.finditer(r"%\documentclass", content): 
-                                    all_dc_idx.append(m.start()) 
-                                # Check if there is a % before the \documentclass
-                                true_dc_idx = []
-                                for idx in all_dc_idx:
-                                    if r"%" in content[max(content.rfind("\n", 0, idx,),0):idx]:
-                                        continue
-                                    else:
-                                        true_dc_idx.append(idx)
-                                # If there is more than 0 \documentclass in the file, set the content as the main file and increment the amount of files with \documentclass in root
-                                if len(true_dc_idx) > 0:
-                                    doc_class_n += 1
-                                    doc_main = content
-                        except UnicodeDecodeError:
-                            print(f"Error reading file: {file}")
-                            # Delete the folder if there is an error reading a file in it
-                            break 
-            # If there is not 1 \documentclass in the folder, print an error and continue to the next folder
-            if doc_class_n != 1:
-                print(f"Error: {doc_class_n} \documentclass in {root}. Must be 1.")
-                # Delete the folder if there is an error reading a file in it
-                continue
+            Arguments:
+            tex_string: The tex string to be cleaned.
+
+            Returns:
+            The cleaned tex string.
+            """
+            # Remove all comments
+            cleaned_tex_string = re.sub(r"\\begin{comment}.*?\\end{comment}", "", tex_string, flags=re.DOTALL | re.MULTILINE)
+            cleaned_tex_string = re.sub(r"%.*", "", cleaned_tex_string)
             
-            # Create a new main file in the step_2 folder
-            new_main_file = os.path.join(os.path.dirname(self.data), Path("./"+self.target), os.path.relpath(root, self.data), "main.txt")
-            
-            # Iteratively input all the \input files into the main file
-            while True:
-                all_inputs_idx = [m.start() for m in re.finditer(r"\\input\{(.+?)\}", doc_main)] # Finds all \input{...}
-                # Check if there is a % before the \input
-                true_inputs_idx = []
-                for idx in all_inputs_idx:
-                    if "%" in doc_main[doc_main.rfind("\n", 0, idx):idx]:
-                        continue
-                    else:
-                        true_inputs_idx.append(idx)
-                # If there are no \input files, break the loop
-                if len(true_inputs_idx) == 0:
-                    break
+            return cleaned_tex_string
+
+        # Check if there is only one \documentclass in the folder
+        doc_class_n = 0
+        doc_main = None
+        for file in files:
+            if file.lower().endswith(".tex"): 
+                with open(os.path.join(root, file), 'r', encoding=self.encoder) as f:  # Encoding is ISO-8859-1. The only working encoder for latex.
+                    try:
+                        content = str(f.read())
+                        if r"\documentclass" in content:
+                            all_dc_idx = [m.start() for m in re.finditer(r"\\documentclass", content)]
+                            for m in re.finditer(r"%\documentclass", content): 
+                                all_dc_idx.append(m.start()) 
+                            # Check if there is a % before the \documentclass
+                            true_dc_idx = []
+                            for idx in all_dc_idx:
+                                if r"%" in content[max(content.rfind("\n", 0, idx,),0):idx]:
+                                    continue
+                                else:
+                                    true_dc_idx.append(idx)
+                            # If there is more than 0 \documentclass in the file, set the content as the main file and increment the amount of files with \documentclass in root
+                            if len(true_dc_idx) > 0:
+                                doc_class_n += 1
+                                doc_main = content
+                    except UnicodeDecodeError:
+                        print(f"Error reading file in merge_tex_files: {file}")
+                        # Delete the folder if there is an error reading a file in it
+                        return None, None 
+        # If there is not 1 \documentclass in the folder, print an error and continue to the next folder
+        if doc_class_n != 1:
+            print(f"Error: {doc_class_n} \documentclass in {root}. Must be 1.")
+            # Delete the folder if there is an error reading a file in it
+            return None, None
+
+        # Create a new main file in the step_2 folder
+        new_main_file = os.path.join(os.path.dirname(self.data), Path("./"+self.target), os.path.relpath(root, self.data), "main.txt")
+        
+        # Iteratively input all the \input files into the main file
+        while True:
+            all_inputs_idx = [m.start() for m in re.finditer(r"\\input\{(.+?)\}", doc_main)] # Finds all \input{...}
+            # Check if there is a % before the \input
+            true_inputs_idx = []
+            for idx in all_inputs_idx:
+                if "%" in doc_main[doc_main.rfind("\n", 0, idx):idx]:
+                    continue
                 else:
-                    # Iteratively input all the \input files into the main file from the last to the first
-                    for i in range(len(true_inputs_idx)-1, -1, -1):
-                        idx = true_inputs_idx[i]
-                        end_idx = doc_main.find("}", idx)
-                        # the file being inputted:
-                        file_path = os.path.join(root, doc_main[idx+7:end_idx].replace("/", "\\") + (".tex" if not doc_main[idx+7:end_idx].endswith((".tex",".bbl",".bib")) else ""))
-                        # Read the file and input it into the main file
+                    true_inputs_idx.append(idx)
+            # If there are no \input files, break the loop
+            if len(true_inputs_idx) == 0:
+                break
+            else:
+                # Iteratively input all the \input files into the main file from the last to the first
+                for i in range(len(true_inputs_idx)-1, -1, -1):
+                    idx = true_inputs_idx[i]
+                    end_idx = doc_main.find("}", idx)
+                    # the file being inputted:
+                    file_path = os.path.join(root, doc_main[idx+7:end_idx].replace("/", "\\") + (".tex" if not doc_main[idx+7:end_idx].endswith((".tex",".bbl",".bib")) else ""))
+                    # Read the file and input it into the main file
+                    try:
+                        input_file = open(file_path, 'r', encoding=self.encoder)
                         try:
-                            input_file = open(file_path, 'r', encoding=self.encoder)
-                            try:
-                                input_content = str(input_file.read())
-                            except UnicodeDecodeError:
-                                print(f"Error reading file: {file_path}")
-                                continue ##### ?????????
-                            input_file.close()
+                            input_content = str(input_file.read())
                             doc_main = doc_main[:idx] + input_content + doc_main[end_idx+1:]
-                        except Exception as e:
-                            doc_main = doc_main[:idx+4] + "l" + doc_main[idx+5:]
-                            print(f"Error for inputting path: {file_path}. Error: {e}")
-                            continue
-            # Write the main file to the step_2 folder
-            file_write = open(new_main_file, 'w', encoding=self.encoder)
-            file_write.write(str(doc_main))
-            file_write.close()
+                        except UnicodeDecodeError:
+                            print(f"Error reading file for inputting in merge_tex_files: {file_path}")
+                            continue 
+                        input_file.close()
+                    except Exception as e:
+                        doc_main = doc_main[:idx+4] + "l" + doc_main[idx+5:]
+                        print(f"Error for inputting path in merge_tex_files: {file_path}. Error: {e}")
+                        continue
+        return new_main_file, clean_tex_string(doc_main)
+
+    def split_cites(self, doc_contents):
+        """
+        If an instance of a citation contains multiple sources, split them into separate instances, e.g., \cite{a,b} -> \cite{a} \cite{b}.
+
+        Arguments:
+        tex_file: The .tex file to be processed.
+
+        Returns:
+        None
+        """
+        
+        cites = re.findall(r"\\cite{.*?}", doc_contents)
+        for cite in cites:
+            if "," in cite:
+                split_cites = re.split(r",", re.search(r"\\cite{.*?}", cite).group()[6:-1]) # Splits up the citation. The group()[6:-1] is to remove the \cite{} part.
+                split_cites = [f"\\cite{{{split_cite.strip()}}}" for split_cite in split_cites] # Removes whitespace
+                doc_contents = doc_contents.replace(cite, ' '.join(split_cites))
+
+        cites = re.findall(r"\\footcite{.*?}", doc_contents)
+        for cite in cites:
+            if "," in cite:
+                split_cites = re.split(r",", re.search(r"\\footcite{.*?}", cite).group()[10:-1]) # Splits up the citation. The group()[10:-1] is to remove the \footcite{} part.
+                split_cites = [f"\\footcite{{{split_cite.strip()}}}" for split_cite in split_cites] # Removes whitespace
+                doc_contents = doc_contents.replace(cite, ' '.join(split_cites))
+
+        cites = re.findall(r"\\citep{.*?}", doc_contents)
+        for cite in cites:
+            if "," in cite:
+                split_cites = re.split(r",", re.search(r"\\citep{.*?}", cite).group()[7:-1]) # Splits up the citation. The group()[7:-1] is to remove the \citep{} part.
+                split_cites = [f"\\citep{{{split_cite.strip()}}}" for split_cite in split_cites] # Removes whitespace
+                doc_contents = doc_contents.replace(cite, ' '.join(split_cites))
+
+        cites = re.findall(r"\\citet{.*?}", doc_contents)
+        for cite in cites:
+            if "," in cite:
+                split_cites = re.split(r",", re.search(r"\\citet{.*?}", cite).group()[7:-1]) # Splits up the citation. The group()[7:-1] is to remove the \citet{} part.
+                split_cites = [f"\\citet{{{split_cite.strip()}}}" for split_cite in split_cites] # Removes whitespace
+                doc_contents = doc_contents.replace(cite, ' '.join(split_cites)) 
+        
+
+        #with open(tex_file, 'r', encoding=self.encoder) as f:
+        #    lines = f.readlines()
+
+        #with open(tex_file, 'w', encoding=self.encoder) as f:
+        #    for line in lines:
+        #        if "\\cite{" in line: # \cite
+        #            cites = re.findall(r"\\cite{.*?}", line)
+        #            for cite in cites:
+        #                if "," in cite:
+        #                    split_cites = re.split(r",", re.search(r"\\cite{.*?}", cite).group()[6:-1]) # Splits up the citation. The group()[6:-1] is to remove the \cite{} part.
+        #                    split_cites = [f"\\cite{{{split_cite.strip()}}}" for split_cite in split_cites] # Removes whitespace
+        #                    line = line.replace(cite, ' '.join(split_cites))
+        #        if "\\footcite{" in line: # \footcite
+        #            cites = re.findall(r"\\footcite{.*?}", line)
+        #            for cite in cites:
+        #                if "," in cite:
+        #                    split_cites = re.split(r",", re.search(r"\\footcite{.*?}", cite).group()[10:-1]) # Splits up the citation. The group()[10:-1] is to remove the \footcite{} part.
+        #                    split_cites = [f"\\footcite{{{split_cite.strip()}}}" for split_cite in split_cites] # Removes whitespace
+        #                    line = line.replace(cite, ' '.join(split_cites))
+        #        if "\\citep{" in line: # \citep
+        #            cites = re.findall(r"\\citep{.*?}", line)
+        #            for cite in cites:
+        #                if "," in cite:
+        #                    split_cites = re.split(r",", re.search(r"\\citep{.*?}", cite).group()[7:-1]) # Splits up the citation. The group()[7:-1] is to remove the \citep{} part.
+        #                    split_cites = [f"\\citep{{{split_cite.strip()}}}" for split_cite in split_cites] # Removes whitespace
+        #                    line = line.replace(cite, ' '.join(split_cites))
+        #        if "\\citet{" in line: # \citet
+        #            cites = re.findall(r"\\citet{.*?}", line)
+        #            for cite in cites:
+        #                if "," in cite:
+        #                    split_cites = re.split(r",", re.search(r"\\citet{.*?}", cite).group()[7:-1]) # Splits up the citation. The group()[7:-1] is to remove the \citet{} part.
+        #                    split_cites = [f"\\citet{{{split_cite.strip()}}}" for split_cite in split_cites] # Removes whitespace
+        #                    line = line.replace(cite, ' '.join(split_cites)) 
+        #        f.write(line)
+        
+        return doc_contents
+
+    def isolate_cites(self, doc_contents):
+        """
+        Find every instance of citations (\cite{}, \footcite{}, \citep, etc.) in a .tex file and inserts \n before and after the instance.
+
+        Arguments:
+        tex_file: The .tex file to be searched for citations.
+
+        Returns:
+        None
+        """
+
+        doc_contents = re.sub(r"(\\cite{.*?})", r"\n\1\n", doc_contents)
+        doc_contents = re.sub(r"(\\footcite{.*?})", r"\n\1\n", doc_contents)
+        doc_contents = re.sub(r"(\\citep{.*?})", r"\n\1\n", doc_contents)
+        doc_contents = re.sub(r"(\\citet{.*?})", r"\n\1\n", doc_contents)
+        #with open(tex_file, 'r', encoding=self.encoder) as f:
+        #    lines = f.readlines()
+
+        #with open(tex_file, 'w', encoding=self.encoder) as f:
+
+            # For every line in the file, if the line contains a citation, add \n before and after the citation
+            #for line in lines:
+            #    if "\\cite{" in line: # \cite
+            #        line = re.sub(r"(\\cite{.*?})", r"\n\1\n", line)
+            #    if "\\footcite{" in line: # \footcite
+            #        line = re.sub(r"(\\footcite{.*?})", r"\n\1\n", line)
+            #    if "\\citep{" in line: # \citep
+            #        line = re.sub(r"(\\citep{.*?})", r"\n\1\n", line)
+            #    if "\\citet{" in line: # \citet
+            #        line = re.sub(r"(\\citet{.*?})", r"\n\1\n", line)
+            #    f.write(line)
+                
+        return doc_contents
+
 
 
     def extract_references(self):
@@ -225,6 +343,30 @@ class step2_processing:
         print(f"Moved {count} already established references to {self.target} folder")
 
 
+    def create_main_txt(self):
+        prev_root = "sdfgdgdfjsdfg"
+        for root, dirs, files in os.walk(self.data):
+            if Path("./"+root) == self.data or prev_root in root:
+                continue
+            prev_root = root
+
+            new_main_file, doc_contents = self.merge_tex_files(root, files)
+
+            if new_main_file is not None:
+                # Split the citations in the main file
+                doc_contents = self.split_cites(doc_contents)
+                # Isolate the citations in the main file
+                doc_contents = self.isolate_cites(doc_contents)
+                # Write the main file to the step_2 folder
+                file_write = open(new_main_file, 'w', encoding=self.encoder)
+                file_write.write(doc_contents)
+                file_write.close()
+                pass
+                
+                
+
+
+
     def create_references_json(self):
         """
         parsed_bib_files = [] # List of dictionaries
@@ -287,7 +429,8 @@ class step2_processing:
 if __name__ == "__main__":
     process = step2_processing("Processed_files", "Step_2")
     process.create_target_folder()
-    process.merge_tex_files()
+    process.create_main_txt()
+    #process.merge_tex_files()
     process.extract_references()
     process.remove_bib_from_main()
     process.move_references() 

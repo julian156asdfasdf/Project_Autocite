@@ -38,15 +38,15 @@ class step0_processing:
 
     # Specify the directory where you want to save the papers
 
-    def get_docs(self, k=2):
+    def get_docs(self, start_id=0, window_size=2):
         """
         Takes a directory and a list of links to papers and downloads the papers as .tar files to the directory.
         """
 
-        for idx, link in enumerate(self.links[:k], start=1):  # Just an example with `.tail()`, remove it to download all
+        for idx, link in enumerate(self.links[:window_size], start=1):  # Just an example with `.tail()`, remove it to download all
             paper_id = self.arxiv_papers.iloc[idx - 1].arxiv_id  # Adjust index if necessary
             file_path = Path("./"+self.target) / f"{paper_id}.tar"
-            print(f"Downloading {paper_id} to {file_path}... " + str(idx) + "/" + str(k))
+            print(f"Downloading {paper_id} to {file_path}... " + str(idx) + "/" + str(window_size))
 
             # Download a paper from the given URL and save it to the given path.
             response = requests.get(link)
@@ -61,4 +61,4 @@ if __name__ == "__main__":
     process = step0_processing("Papers")
     process.create_target_folder()
     process.get_tar_links()
-    process.get_docs(k=2)
+    process.get_docs(window_size=2)
