@@ -3,6 +3,7 @@
 
 import re
 from typing import Union
+from collections import defaultdict
 
 from pylatexenc.latex2text import LatexNodes2Text
 
@@ -28,6 +29,7 @@ class BibItem:
         self.info: dict[str, Union[str, list[str]]] = {"authors": []}
         self.key = ""
         self.bib_id = ""
+        self.poss_titles = []
         self._parse(bib_string)
 
     def _parse(self, bib_string: str):
@@ -40,10 +42,10 @@ class BibItem:
         #print(self.key, self.bib_id)
 
         self.info[self.bib_id] = ACCENT_CONVERTER.latex_to_text(self.text)
-
+        self.poss_titles.append(ACCENT_CONVERTER.latex_to_text(self.text))
         if bib_string.split(r"\bibinfo"):
             self._parse_bib_info_lines(bib_string)
-
+        
     def _parse_bib_info_lines(self, bib_string):
     
         bib_info_lines = bib_string.split(r"\bibinfo")[1:]
@@ -117,17 +119,19 @@ class BblFile:
     """
 
     def __init__(self, fname: str):
+        self.bib_dict = {}
         self.fname = fname
         self.header = ""
         self.bib_items: list[BibItem] = []
         self._parse()
+
 
     def _parse(self):
         with open(self.fname, "r") as f:
             lines = f.readlines()
         header_lines = []
         bibitem_lines = []
-        counter = 0
+
         for line in lines:
             if line.strip().startswith(r"%") or not line.strip():
                 continue
@@ -150,7 +154,11 @@ class BblFile:
             BibItem(r"\bibitem" + item) for item in bibitem_text.split(r"\bibitem")[1:]
         ]
         #print('finished', self.bib_items)
-
+        #print(self.bib_dict)
+        #for item in self.bib_items:
+        #    self.bib_dict[item.bib_id] = item.poss_titles
+        for item in self.bib_items:
+            self.bib_dict[item.bib_id] = item.poss_titles
     def __str__(self) -> str:
         final_str = ""
         for index, item in enumerate(self.bib_items, start=1):
@@ -170,14 +178,14 @@ class BblFile:
 
 #Virker for den her C:\Users\julia\Desktop\Fagprojekt\Project_Autocite\Processed_files\1008.1024v2\main.bbl
 
-
+# Find kun titel, det virker med arXiv Api
 
 
 if __name__ == "__main__":
     import sys
 
     #bib_info = BblFile(sys.argv[1])
-    path = r"C:\Users\julia\Desktop\Fagprojekt\Project_Autocite\Processed_files\1008.1024v2\main.bbl"
+    path = "/Users/julianoll/Desktop/Fagprojekt/Project_Autocite/tex_files/0712.4273v4/RecursiveEM.bbl"
     bblfile = path
 
 
@@ -188,36 +196,4 @@ if __name__ == "__main__":
 
 
 
-
-
-
-'''
-
-import re
-
-text = "[Barabási and Pósfai(2016)]{barabasi2016network}\n\nAlbert-László Barabási and Márton Pósfai.\n\n\\newblock \\emph{Network Science}.\n\n\\newblock Cambridge University Press, Cambridge, 2016."
-
-print(text)
-
-print(ACCENT_CONVERTER.latex_to_text(text))
-
-#%%
-match = re.match(r"^\[(.*?)\]\{(.*?)\}(.*)$", text, re.DOTALL)
-
-if match:
-    square_bracket_contents = match.group(1)
-    curly_bracket_contents = match.group(2)
-    rest_of_text = match.group(3)
-    print("Square bracket contents:", square_bracket_contents)
-    print("Curly bracket contents:", curly_bracket_contents)
-    print("Rest of the text:", rest_of_text)
-else:
-    print("No match found.")
-
-
-
-
-
-'''
-
-hello = 1.2
+	
