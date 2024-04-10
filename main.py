@@ -2,23 +2,32 @@ from step0_processing import step0_processing
 from step1_processing import step1_processing
 from step2_processing import step2_processing
 from step1_processing import delete_empty_folders
-#import os
-#from datasaet import get_tar_links, get_docs, tar_extractor, rmv_irrelevant_files
-#from data_count import count_ref
+
+import random
 
 if __name__ == '__main__':
     # step 0 Initialization
+    # Load Kaggle Dataset
+    print("Loading Kaggle Dataset... (Should take around 30)")
+    with open("Kaggle_Dataset.json", 'r') as file:
+        KaggleDB = file.readlines()
+        random.seed(42)
+        random.shuffle(KaggleDB)
+
     step_0_target_name = "Step_0"
-    step_0 = step0_processing(target_name="Step_0", Kaggle_dataset_path="Kaggle_Dataset.json", start_idx=0, window_size=100, end_idx=100)
-    step_0.create_target_folder()
+    # Remember to update the start_idx, window_size and end_idx to the desired values
+    step_0 = step0_processing(KaggleDB=KaggleDB, target_name=step_0_target_name, start_idx=0, window_size=100, end_idx=100)
+    #step_0.create_target_folder()
+
+    # Create sliding window for step 0-2
     for i in range(step_0.rounds):
         # step 0 Download tar files
         print("Starting round " + str(step_0.round_number) + "...")
-        print("Downloading tar files...")
-        step_0.round_number += 1
-        step_0.get_tar_links_test(start_id=step_0.window_size*i+step_0.start_idx)
-        step_0.get_docs_test()
-        print("Downloaded tar files successfully.")
+        #print("Downloading tar files...")
+        #step_0.round_number += 1
+        #step_0.get_tar_links(start_id=step_0.window_size*i+step_0.start_idx)
+        #step_0.get_docs()
+        #print("Downloaded tar files successfully.")
 
     #if os.path.exists(step_0) == False:
     #    os.makedirs(step_0, exist_ok=True)
@@ -28,13 +37,13 @@ if __name__ == '__main__':
         # Step 1 Extract from .tar and remove irrelevant files
         print("\nStarting Step 1...")
         step_1_target_name = "Step_1"
-        step_1 = step1_processing(directory = step_0_target_name, target_name = step_1_target_name)
-        step_1.create_target_folder()
-        print("Created target folder.")
-        step_1.tar_extractor()
-        print("Extracted .tar files.")
-        step_1.rmv_irrelevant_files(manifest_title="manifest_irrelevant_files.txt")
-        print("Removed irrelevant files.")
+        #step_1 = step1_processing(directory = step_0_target_name, target_name = step_1_target_name)
+        #step_1.create_target_folder()
+        #print("Created target folder.")
+        #step_1.tar_extractor()
+        #print("Extracted .tar files.")
+        #step_1.rmv_irrelevant_files(manifest_title="manifest_irrelevant_files.txt")
+        #print("Removed irrelevant files.")
     #Path("./Processed_files")
     #if os.path.exists(step_1) == False:
     #    os.makedirs(step_1, exist_ok=True)

@@ -18,34 +18,25 @@ class step2_processing:
         
     def create_target_folder(self):
         """
-        Creates a "step_2" folder outside the directory specified by self.data,
-        copying the directory structure but without any files.
-
-        Arguments:
-        None
-
-        Returns:
-        None
+        Copies the directory structure of the self.data directory and appends it to the self.target directory.
         """
-        if not os.path.exists(self.target):
-            for root, dirs, files in os.walk(self.data):
-                relative_path = os.path.relpath(root, self.data)
-                new_folder = os.path.join(self.target, relative_path)
-                os.makedirs(new_folder)
-            print(f"Created folder: '{self.target}'")
-        else:
-            print(f"The {self.target} folder already exists.")
+        for root, dirs, files in os.walk(self.data):
+            relative_path = os.path.relpath(root, self.data)
+            new_folder = os.path.join(self.target, relative_path)
+            os.makedirs(new_folder, exist_ok=True)
     
 
-    def merge_tex_files(self, root, files):
+    def merge_and_clean_tex_files(self, root, files):
         """
-        Merges all the tex files in a subdirectory into one file called main.tex in the step_2 folder.
+        Merges all the tex files in a subdirectory into one tex string.
+        Also cleans the file by removing comments.
 
         Arguments:
-        None
+        root: The root directory of the subdirectory.
+        files: The files in the subdirectory.
 
         Returns:
-        None
+        The path to the new main file and the cleaned tex string.
         """
 
         def clean_tex_string(tex_string):
@@ -72,18 +63,18 @@ class step2_processing:
                 with open(os.path.join(root, file), 'r', encoding=self.encoder) as f:  # Encoding is ISO-8859-1. The only working encoder for latex.
                     try:
                         content = str(f.read())
-                        if r"\documentclass" in content:
+                        if r"\documentclass" in content or r"\documentstyle" in content:
                             all_dc_idx = [m.start() for m in re.finditer(r"\\documentclass", content)]
-                            for m in re.finditer(r"%\documentclass", content): 
-                                all_dc_idx.append(m.start()) 
-                            # Check if there is a % before the \documentclass
+                            for m in re.finditer(r"\\documentstyle", content):
+                                all_dc_idx.append(m.start())
+                            # Check if there is a % before the \documentclass or \documentstyle
                             true_dc_idx = []
                             for idx in all_dc_idx:
                                 if r"%" in content[max(content.rfind("\n", 0, idx,),0):idx]:
                                     continue
                                 else:
                                     true_dc_idx.append(idx)
-                            # If there is more than 0 \documentclass in the file, set the content as the main file and increment the amount of files with \documentclass in root
+                            # If there is more than 0 \documentclass or \documentstyle in the file, set the content as the main file and increment the amount of files with \documentclass or \documentstyle in root
                             if len(true_dc_idx) > 0:
                                 doc_class_n += 1
                                 doc_main = content
@@ -141,10 +132,10 @@ class step2_processing:
         If an instance of a citation contains multiple sources, split them into separate instances, e.g., \cite{a,b} -> \cite{a} \cite{b}.
 
         Arguments:
-        tex_file: The .tex file to be processed.
+        String doc_contents: The contents of the .tex file to be searched for citations.
 
         Returns:
-        None
+        doc_contents: The contents of the .tex file with the citations split up.
         """
         
         cites = re.findall(r"\\cite{.*?}", doc_contents)
@@ -215,13 +206,13 @@ class step2_processing:
 
     def isolate_cites(self, doc_contents):
         """
-        Find every instance of citations (\cite{}, \footcite{}, \citep, etc.) in a .tex file and inserts \n before and after the instance.
+        Find every instance of citations (\cite{}, \footcite{}, \citep, etc.) in a .text string and inserts \n before and after the instance.
 
         Arguments:
-        tex_file: The .tex file to be searched for citations.
+        String doc_contents: The contents of the .tex file to be searched for citations.
 
         Returns:
-        None
+        doc_contents: The contents of the .tex file with the citations isolated.
         """
 
         doc_contents = re.sub(r"(\\cite{.*?})", r"\n\1\n", doc_contents)
@@ -344,13 +335,16 @@ class step2_processing:
 
 
     def create_main_txt(self):
+        """
+        Creates a main.txt file for each paper in the self.data directory into the self.target directory.
+        """
         prev_root = "sdfgdgdfjsdfg"
         for root, dirs, files in os.walk(self.data):
             if Path("./"+root) == self.data or prev_root in root:
                 continue
             prev_root = root
 
-            new_main_file, doc_contents = self.merge_tex_files(root, files)
+            new_main_file, doc_contents = self.merge_and_clean_tex_files(root, files)
 
             if new_main_file is not None:
                 # Split the citations in the main file
@@ -362,6 +356,8 @@ class step2_processing:
                 file_write.write(doc_contents)
                 file_write.close()
                 pass
+            else:
+                shutil.rmtree(root.replace(str(self.data),self.target), ignore_errors=True)
                 
                 
 

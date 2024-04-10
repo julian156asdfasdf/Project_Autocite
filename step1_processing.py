@@ -44,6 +44,9 @@ class step1_processing:
         self.target = target_name
 
     def create_target_folder(self):
+        """
+        Deletes the current Step_1 folder and creates a new empty one.
+        """
         shutil.rmtree(self.target, ignore_errors=True)
         os.makedirs(self.target, exist_ok=False)
 
