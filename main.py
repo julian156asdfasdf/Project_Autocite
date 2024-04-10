@@ -9,7 +9,7 @@ from step1_processing import delete_empty_folders
 if __name__ == '__main__':
 # step 0 Download Data
     print("Starting Step 0...")
-    step_0_target_name = "Papers"
+    step_0_target_name = "Step_0"
     step_1 = step0_processing(target_name = step_0_target_name)
     step_1.create_target_folder()
     step_1.get_tar_links()
@@ -22,7 +22,7 @@ if __name__ == '__main__':
 
 # Step 1 Extract from .tar and remove irrelevant files
     print("\nStarting Step 1...")
-    step_1_target_name = "Processed_files"
+    step_1_target_name = "Step_1"
     step_1 = step1_processing(directory = step_0_target_name, target_name = step_1_target_name)
     step_1.create_target_folder()
     print("Created target folder.")
