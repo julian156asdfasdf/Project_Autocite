@@ -4,6 +4,7 @@ from pathlib import Path
 import tarfile
 import os
 import tabulate
+import shutil
 
 def delete_empty_folders(root):
     """
@@ -43,8 +44,8 @@ class step1_processing:
         self.target = target_name
 
     def create_target_folder(self):
-        if os.path.exists(self.target) == False:
-            os.makedirs(self.target, exist_ok=True)
+        shutil.rmtree(self.target, ignore_errors=True)
+        os.makedirs(self.target, exist_ok=False)
 
     def tar_extractor(self):
         """
