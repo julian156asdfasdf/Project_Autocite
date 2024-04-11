@@ -24,7 +24,7 @@ if __name__ == '__main__':
 
     # Create sliding window for step 0-2
     for i in range(step_0.rounds):
-        # step 0 Download tar files
+    # step 0 Download tar files
         print("Starting round " + str(step_0.round_number) + "...")
         print("Downloading tar files...")
         step_0.round_number += 1
@@ -33,7 +33,7 @@ if __name__ == '__main__':
         step_0.get_docs()
         print("Downloaded tar files successfully.")
 
-        # Step 1 Extract from .tar and remove irrelevant files
+    # Step 1 Extract from .tar and remove irrelevant files
         print("\nStarting Step 1...")
         step_1.create_target_folder()
         print("Created target folder.")
@@ -48,14 +48,8 @@ if __name__ == '__main__':
         print("Created target folder.")
         step_2.create_main_txt()
         print("Created main.txt.")
-        #step_2.extract_references()
-        #print("Extracted references.")
-        #step_2.remove_bib_from_main()
-        #print("Removed bibliographies from main.txt files")
-        #step_2.move_references()
-        #print("Moved reference files.")
-        #step_2.create_references_json()
-        #print("Created references.json.")
+        # step_2.create_references_json()
+        # print("Created references.json.")
     # End of sliding window
     delete_empty_folders(step_2.target)
 

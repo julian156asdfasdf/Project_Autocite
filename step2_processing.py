@@ -6,6 +6,7 @@ from pathlib import Path
 import re
 import shutil
 from parseBib import parseBib
+from parseBbl import *
 
 
 class step2_processing:
@@ -239,47 +240,34 @@ class step2_processing:
         return doc_contents
 
 
-
-    def extract_references(self):
+    def extract_references(self, file):
         """
-        Extracts the references from the .tex files in the directory tree and writes them to a .bbl file.
-        
+        Helper function. Extracts the references from the given .tex file and returns it as a string
+       
         Arguments:
-        None
-        
+        The file path [str]
+       
         Returns:
-        None
+        bibliography section [str], if it found any,
+        else empty string [str]
         """
-        count = 0
-        for root, dirs, files in os.walk(self.data):
-            for file in files:
-                if file.lower().endswith(".tex"):
-                    with open(os.path.join(root, file), 'r', encoding=self.encoder) as f:
-                        try:
-                            tex_content = f.read()
-                        except UnicodeDecodeError:
-                            print(f"Error reading file: {file}")
-                            continue
-
-                    
-                    # Find the start and end indices of the bibliography section
-                    start_index = tex_content.find(r"\begin{thebibliography}")
-                    end_index = tex_content.find(r"\end{thebibliography}")
-                    
-                    # Check if the bibliography section exists in the tex_content
-                    if start_index != -1 and end_index != -1:
-                        # Extract the bibliography section
-                        bibliography_section = tex_content[start_index:end_index + len(r"\end{thebibliography}")]
-                    
-                        # Write the bibliography section to the ref.bbl file in the step_2 folder
-                        step_2_folder = os.path.join(os.path.dirname(self.data), self.target)
-                        new_folder = os.path.join(step_2_folder, os.path.relpath(root, self.data))
-                        os.makedirs(new_folder, exist_ok=True)
-                        with open(os.path.join(new_folder, "ref_0.bbl"), 'w', encoding=self.encoder) as f:
-                            f.write(bibliography_section)
-                            self.manifest[root[16:27]].add(file)
-                            count += 1
-        print(f"Extracted references from {count} tex files")
+        with open(file, 'r', encoding=self.encoder) as f:
+            try:
+                tex_content = f.read()
+            except UnicodeDecodeError:
+                print(f"Error reading file: {file}")
+                return ""
+       
+        # Find the start and end indices of the bibliography section
+        start_index = tex_content.find(r"\begin{thebibliography}")
+        end_index = tex_content.find(r"\end{thebibliography}")
+       
+        # Check if the bibliography section exists in the tex_content
+        if start_index != -1 and end_index != -1:
+            # Extract the bibliography section
+            bibliography_section = tex_content[start_index:end_index + len(r"\end{thebibliography}")]
+            return bibliography_section
+        return ""
     
 
     def remove_bib_from_main(self):
@@ -365,70 +353,83 @@ class step2_processing:
 
     def create_references_json(self):
         """
-        parsed_bib_files = [] # List of dictionaries
-        parsed_bbl_files = [] # List of dictionaries
-
-        for each .bib file:
-            parsed_bib_files.append(parse_bib(bib_file))
-        for each .bbl file:
-            parsed_bbl_files.append(parse_bbl(bbl_file))
+        Creates a references.json file for each paper in the self.data directory into the self.target directory.
         
-        Combine the parsed_bib_files and parsed_bbl_files into a single dictionary
-
-        Create json file containing the combined dictionary
+        Arguments:
+        None
         
-        delete all the .bib and .bbl files from folder
+        Returns:
+        None
         """
-        
+        base_folder = os.path.dirname(self.data)
+        step_2_folder = os.path.join(base_folder, self.target)
         # Walk through directory
-        for root, dirs, files in os.walk(self.target):
-            parsed_bib_files = {}
-            parsed_bbl_files = {}
-
+        for root, dirs, files in os.walk(self.data):
+            parsed = {}
             for file in files:
                 if file.lower().endswith(".bib"):
+                    # Read the .bib file and save it in a variable, that will update the dictionary
                     with open(os.path.join(root, file), 'r', encoding=self.encoder) as f:
                         bib_content = f.read()
-                        
-                        # Parse the .bib file and append it to the list
-                        parsed_bib_files.update(parseBib(bib_content))
-                        
+                       
+                    # Parse the .bib file and append it to the list
+                    parsed.update(parseBib(bib_content))
+                       
                 elif file.lower().endswith(".bbl"):
-                    with open(os.path.join(root, file), 'r', encoding=self.encoder) as f:
-                        bbl_content = f.read()
-                        
-                        # Parse the .bbl file and append it to the list
-                        parsed_bbl_files.update(parseBbl(bbl_content))
+                    # use the BblFile class to parse the .bbl file
+                    bbl_path = os.path.join(root, file)
+                    try:
+                        bbl_parsed = BblFile(bbl_path)
+                    except Exception as e:
+                        print(f"Error parsing bbl file: {bbl_path}. Error: {e}")
+                        continue
+                    # Parse the .bbl file and append it to the list
+                    parsed.update(bbl_parsed.bib_dict)
+ 
+                elif file.lower().endswith(".tex"):
+                    # First use the helper function to extract the references from the .tex file
+                    extracted_ref = self.extract_references(os.path.join(root,file))
+                    if extracted_ref != "": # if it found some references in the .tex file, update dict
+                        # Then make a temporary .bbl file such that the BblFile class can parse it
+                        temp_bbl_path = os.path.join(root, "temp.bbl")
+                        with open(temp_bbl_path, 'w', encoding=self.encoder) as f:
+                            f.write(extracted_ref)
+                        # Parse the temporary .bbl file
+                        try: 
+                            bbl_parsed = BblFile(temp_bbl_path)
+                        except Exception as e:
+                            print(f"Error parsing bbl file: {temp_bbl_path}. Error: {e}")
+                            continue
+                        # Append the parsed .bbl file to the list
+                        parsed.update(bbl_parsed.bib_dict)
             
-            if root is self.target:
+            if root is self.data.stem:
                 continue
-
-            # Combine the parsed files into one dictionary
-            combined_dict = {**parsed_bib_files, **parsed_bbl_files}
+            
+            # Dont make the json file if there are no references
+            if len(parsed) == 0:
+                continue
             
             # Add 'arXiv-id' and 'abstract' keys to the dictionary
-            for key in combined_dict.keys():
-                combined_dict[key] = {**combined_dict[key], **{'arXiv-id': None, 'abstract': None}}
-            
-            # Make combined dictionary into a .json file
-            with open(os.path.join(root, "references.json"), 'w') as f:
-                json.dump(combined_dict, f)
-            
-            # Delete all .bib and .bbl files from the folder
-            for file in files:
-                if file.lower().endswith((".bib", ".bbl")):
-                    os.remove(os.path.join(root, file))
-
+            for key in parsed.keys():
+                parsed[key] = {**parsed[key], **{'arXiv-id': None, 'abstract': None}}
+           
+            # Make dictionary into a .json file
+            destination_dir = os.path.join(step_2_folder, os.path.relpath(root, self.data))
+            with open(os.path.join(destination_dir, "references.json"), 'w') as f:
+                json.dump(parsed, f)
+           
         print("Created references.json file and removed all .bib and .bbl files.")
     
 
 if __name__ == "__main__":
-    process = step2_processing("Processed_files", "Step_2")
-    process.create_target_folder()
-    process.create_main_txt()
-    #process.merge_tex_files()
-    process.extract_references()
-    process.remove_bib_from_main()
-    process.move_references() 
-    delete_empty_folders(process.target)
+    process = step2_processing("Step_t copy", "Step_f")
     process.create_references_json()
+    # process.create_target_folder()
+    # process.create_main_txt()
+    # #process.merge_tex_files()
+    # process.extract_references()
+    # process.remove_bib_from_main()
+    # process.move_references() 
+    # delete_empty_folders(process.target)
+    # process.create_references_json()
