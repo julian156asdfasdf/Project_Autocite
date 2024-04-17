@@ -27,7 +27,7 @@ class step2_processing:
             os.makedirs(new_folder, exist_ok=True)
     
 
-    def merge_and_clean_tex_files(self, root, files):
+    def merge_and_clean_tex_files(self, root, dirs, files):
         """
         Merges all the tex files in a subdirectory into one tex string.
         Also cleans the file by removing comments.
@@ -55,6 +55,18 @@ class step2_processing:
             cleaned_tex_string = re.sub(r"%.*", "", cleaned_tex_string)
             
             return cleaned_tex_string
+
+        # Get all files (also from subfolders)
+        files_ = files
+        if root == 'Step_1\\2007.14130':
+            print(files_)
+            root_ = root
+            subdirs = [[d for d in os.listdir(root) if os.path.isdir(os.path.join(root, d))]]
+            while len(subdirs[-1]) != 0:
+                subdirs_ = []
+                for subdir in subdirs[-1]:
+                    subdirs_.append([os.path.join(subdir,d) for d in os.listdir(os.path.join(root, subdir)) if os.path.isdir(os.path.join(root, subdir, d))])
+                subdirs.append(subdirs_)
 
         # Check if there is only one \documentclass in the folder
         doc_class_n = 0
@@ -331,8 +343,12 @@ class step2_processing:
             if Path("./"+root) == self.data or prev_root in root:
                 continue
             prev_root = root
-
-            new_main_file, doc_contents = self.merge_and_clean_tex_files(root, files)
+            #print(root)
+            if root == 'Step_1\\2007.14130':
+                print("\n\n")
+                print(dirs)
+                print("\n\n")
+            new_main_file, doc_contents = self.merge_and_clean_tex_files(root, dirs, files)
 
             if new_main_file is not None:
                 # Split the citations in the main file
@@ -424,9 +440,9 @@ class step2_processing:
 
 if __name__ == "__main__":
     process = step2_processing("Step_1", "Step_2")
-    process.create_references_json()
+    # process.create_references_json()
     # process.create_target_folder()
-    # process.create_main_txt()
+    process.create_main_txt()
     # #process.merge_tex_files()
     # process.extract_references()
     # process.remove_bib_from_main()
