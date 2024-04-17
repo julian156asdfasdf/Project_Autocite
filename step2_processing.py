@@ -423,7 +423,7 @@ class step2_processing:
     
 
 if __name__ == "__main__":
-    process = step2_processing("Step_t copy", "Step_f")
+    process = step2_processing("Step_1", "Step_2")
     process.create_references_json()
     # process.create_target_folder()
     # process.create_main_txt()
