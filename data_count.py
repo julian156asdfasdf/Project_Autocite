@@ -25,5 +25,7 @@ if __name__ == "__main__":
     current_dir = os.path.dirname(os.path.abspath(__file__))
     directory = current_dir
     bbl_count, bib_count = count_ref(directory)
+    dir_count = len(os.listdir(directory))
     print(f"Number of .bbl files: {bbl_count}")
     print(f"Number of .bib files: {bib_count}")
+    print(f"Number of directories: {dir_count}")
