@@ -13,5 +13,5 @@ def parseBib(bibtex_str=None, bibtex_filepath=None):
         return {}
     bib_dict = {}
     for entry in bib.entries:
-        bib_dict[entry['ID']] = {'title': [entry['title']] if 'title' in entry.keys() else []}
+        bib_dict[entry['ID']] = {'title': entry['title'] if 'title' in entry.keys() else ''}
     return bib_dict # Should maybe be written to a text file
