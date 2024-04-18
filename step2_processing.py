@@ -27,7 +27,7 @@ class step2_processing:
             os.makedirs(new_folder, exist_ok=True)
     
 
-    def merge_and_clean_tex_files(self, root, files):
+    def merge_and_clean_tex_files(self, root):
         """
         Merges all the tex files in a subdirectory into one tex string.
         Also cleans the file by removing comments.
@@ -55,6 +55,12 @@ class step2_processing:
             cleaned_tex_string = re.sub(r"%.*", "", cleaned_tex_string)
             
             return cleaned_tex_string
+
+        # Get all files (also from subfolders)
+        files = []
+        for r, d, f in os.walk(root):
+            for file in f:
+                files.append(file)
 
         # Check if there is only one \documentclass in the folder
         doc_class_n = 0
@@ -167,42 +173,6 @@ class step2_processing:
                 split_cites = [f"\\citet{{{split_cite.strip()}}}" for split_cite in split_cites] # Removes whitespace
                 doc_contents = doc_contents.replace(cite, ' '.join(split_cites)) 
         
-
-        #with open(tex_file, 'r', encoding=self.encoder) as f:
-        #    lines = f.readlines()
-
-        #with open(tex_file, 'w', encoding=self.encoder) as f:
-        #    for line in lines:
-        #        if "\\cite{" in line: # \cite
-        #            cites = re.findall(r"\\cite{.*?}", line)
-        #            for cite in cites:
-        #                if "," in cite:
-        #                    split_cites = re.split(r",", re.search(r"\\cite{.*?}", cite).group()[6:-1]) # Splits up the citation. The group()[6:-1] is to remove the \cite{} part.
-        #                    split_cites = [f"\\cite{{{split_cite.strip()}}}" for split_cite in split_cites] # Removes whitespace
-        #                    line = line.replace(cite, ' '.join(split_cites))
-        #        if "\\footcite{" in line: # \footcite
-        #            cites = re.findall(r"\\footcite{.*?}", line)
-        #            for cite in cites:
-        #                if "," in cite:
-        #                    split_cites = re.split(r",", re.search(r"\\footcite{.*?}", cite).group()[10:-1]) # Splits up the citation. The group()[10:-1] is to remove the \footcite{} part.
-        #                    split_cites = [f"\\footcite{{{split_cite.strip()}}}" for split_cite in split_cites] # Removes whitespace
-        #                    line = line.replace(cite, ' '.join(split_cites))
-        #        if "\\citep{" in line: # \citep
-        #            cites = re.findall(r"\\citep{.*?}", line)
-        #            for cite in cites:
-        #                if "," in cite:
-        #                    split_cites = re.split(r",", re.search(r"\\citep{.*?}", cite).group()[7:-1]) # Splits up the citation. The group()[7:-1] is to remove the \citep{} part.
-        #                    split_cites = [f"\\citep{{{split_cite.strip()}}}" for split_cite in split_cites] # Removes whitespace
-        #                    line = line.replace(cite, ' '.join(split_cites))
-        #        if "\\citet{" in line: # \citet
-        #            cites = re.findall(r"\\citet{.*?}", line)
-        #            for cite in cites:
-        #                if "," in cite:
-        #                    split_cites = re.split(r",", re.search(r"\\citet{.*?}", cite).group()[7:-1]) # Splits up the citation. The group()[7:-1] is to remove the \citet{} part.
-        #                    split_cites = [f"\\citet{{{split_cite.strip()}}}" for split_cite in split_cites] # Removes whitespace
-        #                    line = line.replace(cite, ' '.join(split_cites)) 
-        #        f.write(line)
-        
         return doc_contents
 
     def isolate_cites(self, doc_contents):
@@ -220,23 +190,7 @@ class step2_processing:
         doc_contents = re.sub(r"(\\footcite{.*?})", r"\n\1\n", doc_contents)
         doc_contents = re.sub(r"(\\citep{.*?})", r"\n\1\n", doc_contents)
         doc_contents = re.sub(r"(\\citet{.*?})", r"\n\1\n", doc_contents)
-        #with open(tex_file, 'r', encoding=self.encoder) as f:
-        #    lines = f.readlines()
-
-        #with open(tex_file, 'w', encoding=self.encoder) as f:
-
-            # For every line in the file, if the line contains a citation, add \n before and after the citation
-            #for line in lines:
-            #    if "\\cite{" in line: # \cite
-            #        line = re.sub(r"(\\cite{.*?})", r"\n\1\n", line)
-            #    if "\\footcite{" in line: # \footcite
-            #        line = re.sub(r"(\\footcite{.*?})", r"\n\1\n", line)
-            #    if "\\citep{" in line: # \citep
-            #        line = re.sub(r"(\\citep{.*?})", r"\n\1\n", line)
-            #    if "\\citet{" in line: # \citet
-            #        line = re.sub(r"(\\citet{.*?})", r"\n\1\n", line)
-            #    f.write(line)
-                
+               
         return doc_contents
 
 
@@ -326,13 +280,13 @@ class step2_processing:
         """
         Creates a main.txt file for each paper in the self.data directory into the self.target directory.
         """
-        prev_root = "sdfgdgdfjsdfg"
-        for root, dirs, files in os.walk(self.data):
-            if Path("./"+root) == self.data or prev_root in root:
-                continue
-            prev_root = root
+        for root in os.listdir(self.data):
+            files = []
+            for r, d, f in os.walk(root):
+                for file in f:
+                    files.append(file)
 
-            new_main_file, doc_contents = self.merge_and_clean_tex_files(root, files)
+            new_main_file, doc_contents = self.merge_and_clean_tex_files(root)
 
             if new_main_file is not None:
                 # Split the citations in the main file
@@ -438,9 +392,9 @@ class step2_processing:
 
 if __name__ == "__main__":
     process = step2_processing("Step_1", "Step_2")
-    process.create_references_json()
+    # process.create_references_json()
     # process.create_target_folder()
-    # process.create_main_txt()
+    process.create_main_txt()
     # #process.merge_tex_files()
     # process.extract_references()
     # process.remove_bib_from_main()
