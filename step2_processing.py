@@ -346,9 +346,6 @@ class step2_processing:
                 pass
             else:
                 shutil.rmtree(root.replace(str(self.data),self.target), ignore_errors=True)
-                
-                
-
 
 
     def create_references_json(self):
@@ -365,6 +362,8 @@ class step2_processing:
         step_2_folder = os.path.join(base_folder, self.target)
         # Walk through directory
         for root, dirs, files in os.walk(self.data):
+            if root is self.data.stem:
+                continue
             parsed = {}
             for file in files:
                 if file.lower().endswith(".bib"):
@@ -375,36 +374,33 @@ class step2_processing:
                     # Parse the .bib file and append it to the list
                     parsed.update(parseBib(bib_content))
                        
-                elif file.lower().endswith(".bbl"):
-                    # use the BblFile class to parse the .bbl file
-                    bbl_path = os.path.join(root, file)
-                    try:
-                        bbl_parsed = BblFile(bbl_path)
-                    except Exception as e:
-                        print(f"Error parsing bbl file: {bbl_path}. Error: {e}")
-                        continue
-                    # Parse the .bbl file and append it to the list
-                    parsed.update(bbl_parsed.bib_dict)
+                # elif file.lower().endswith(".bbl"):
+                #     # use the BblFile class to parse the .bbl file
+                #     bbl_path = os.path.join(root, file)
+                #     try:
+                #         bbl_parsed = BblFile(bbl_path)
+                #     except Exception as e:
+                #         print(f"Error parsing bbl file: {bbl_path}. Error: {e}")
+                #         continue
+                #     # Parse the .bbl file and append it to the list
+                #     parsed.update(bbl_parsed.bib_dict)
  
-                elif file.lower().endswith(".tex"):
-                    # First use the helper function to extract the references from the .tex file
-                    extracted_ref = self.extract_references(os.path.join(root,file))
-                    if extracted_ref != "": # if it found some references in the .tex file, update dict
-                        # Then make a temporary .bbl file such that the BblFile class can parse it
-                        temp_bbl_path = os.path.join(root, "temp.bbl")
-                        with open(temp_bbl_path, 'w', encoding=self.encoder) as f:
-                            f.write(extracted_ref)
-                        # Parse the temporary .bbl file
-                        try: 
-                            bbl_parsed = BblFile(temp_bbl_path)
-                        except Exception as e:
-                            print(f"Error parsing bbl file: {temp_bbl_path}. Error: {e}")
-                            continue
-                        # Append the parsed .bbl file to the list
-                        parsed.update(bbl_parsed.bib_dict)
-            
-            if root is self.data.stem:
-                continue
+                # elif file.lower().endswith(".tex"):
+                #     # First use the helper function to extract the references from the .tex file
+                #     extracted_ref = self.extract_references(os.path.join(root,file))
+                #     if extracted_ref != "": # if it found some references in the .tex file, update dict
+                #         # Then make a temporary .bbl file such that the BblFile class can parse it
+                #         temp_bbl_path = os.path.join(root, "temp.bbl")
+                #         with open(temp_bbl_path, 'w', encoding=self.encoder) as f:
+                #             f.write(extracted_ref)
+                #         # Parse the temporary .bbl file
+                #         try: 
+                #             bbl_parsed = BblFile(temp_bbl_path)
+                #         except Exception as e:
+                #             print(f"Error parsing bbl file: {temp_bbl_path}. Error: {e}")
+                #             continue
+                #         # Append the parsed .bbl file to the list
+                #         parsed.update(bbl_parsed.bib_dict)
             
             # Dont make the json file if there are no references
             if len(parsed) == 0:
@@ -416,11 +412,29 @@ class step2_processing:
            
             # Make dictionary into a .json file
             destination_dir = os.path.join(step_2_folder, os.path.relpath(root, self.data))
-            with open(os.path.join(destination_dir, "references.json"), 'w') as f:
-                json.dump(parsed, f)
-           
+            try:
+                with open(os.path.join(destination_dir, "references.json"), 'w') as f:
+                    json.dump(parsed, f)
+            except FileNotFoundError:
+                # This is raised when it looks through a subdirectory.
+                parent_dir = os.path.dirname(destination_dir)
+
+                # Load the previously parsed data from the parent directory, if it exists
+                parent_json_path = os.path.join(parent_dir, "references.json")
+                if os.path.exists(parent_json_path):
+                    with open(parent_json_path, 'r') as f:
+                        parent_parsed = json.load(f)
+                else: 
+                    parent_parsed = {}
+
+                # Merge the previously parsed data with the current parsed data
+                parsed = {**parent_parsed, **parsed}
+
+                with open(os.path.join(parent_dir, "references.json"), 'w') as f:
+                    json.dump(parsed, f)
+                
         print("Created references.json file and removed all .bib and .bbl files.")
-    
+
 
 if __name__ == "__main__":
     process = step2_processing("Step_1", "Step_2")

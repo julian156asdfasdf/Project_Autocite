@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 
-def count_ref(directory):
+def count(directory):
     """
     Counts the number of .bbl files and .bib in the chosen directory and its subdirectories.
 
@@ -20,7 +20,7 @@ def count_ref(directory):
             elif file.endswith(".bib"):
                 bib_count += 1
             elif file.endswith(".tex"):
-                tex_count += 1
+                tex_count += 1                
 
     return bbl_count, bib_count, tex_count
 
@@ -28,7 +28,7 @@ if __name__ == "__main__":
     current_dir = os.path.dirname(os.path.abspath(__file__))
     directory = current_dir
     directory = 'Step_1'
-    bbl_count, bib_count, tex_count = count_ref(directory)
+    bbl_count, bib_count, tex_count = count(directory)
     dir_count = len(os.listdir(directory))
     print(f"Number of .bbl files: {bbl_count}")
     print(f"Number of .bib files: {bib_count}")
