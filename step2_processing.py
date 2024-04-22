@@ -360,9 +360,9 @@ class step2_processing:
             if len(parsed) == 0:
                 continue
             
-            # Add 'arXiv-id' and 'abstract' keys to the dictionary
-            for key in parsed.keys():
-                parsed[key] = {**parsed[key], **{'arXiv-id': None, 'abstract': None}}
+            # # Add 'arXiv-id' and 'abstract' keys to the dictionary
+            # for key in parsed.keys():
+            #     parsed[key] = {**parsed[key], **{'arXiv-id': None, 'abstract': None}}
            
             # Make dictionary into a .json file
             destination_dir = os.path.join(step_2_folder, os.path.relpath(root, self.data))
