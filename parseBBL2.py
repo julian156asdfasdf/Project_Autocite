@@ -191,16 +191,17 @@ def parsebbl(file_path = None, bbl_str = None):
 
 
 if __name__ == "__main__":
-    filepaths = [
-        "Step_1/0809.0840/heralhc_jhepwork.bbl", 
-        "Step_1/1601.03559/paper_info.bbl", 
-        "Step_1/1301.6295/GAMPFixPoint.bbl", 
-        "Step_1/1411.7988/Thom.bbl", 
-        "Step_1/1410.6029/AARevSpringer.bbl", 
-        "Step_1/0912.0308/QuantitativeNon-abelianIdempotent.bbl", 
-        "Step_1/1506.06908/Meister15.bbl", 
-        "Step_1/1612.02830/CWBL1.tex"
-    ]
+    #filepaths = [
+    #    "Step_1/0809.0840/heralhc_jhepwork.bbl", 
+    #    "Step_1/1601.03559/paper_info.bbl", 
+    #    "Step_1/1301.6295/GAMPFixPoint.bbl", 
+    #    "Step_1/1411.7988/Thom.bbl", 
+    #    "Step_1/1410.6029/AARevSpringer.bbl", 
+    #    "Step_1/0912.0308/QuantitativeNon-abelianIdempotent.bbl", 
+    #    "Step_1/1506.06908/Meister15.bbl", 
+    #    "Step_1/1612.02830/CWBL1.tex"
+    #]
+    filepaths = ["Step_t/2003.04721/Bursi_text.bbl"]
     bbl_dict = {}
     t0 = time.time()
     for file_path in filepaths:
