@@ -107,7 +107,7 @@ class step1_processing:
 
 
 if __name__ == "__main__":
-    process = step1_processing("Papers", "Processed_files")
+    process = step1_processing("Step_0", "Step_1")
     process.create_target_folder()
     process.tar_extractor()
     process.rmv_irrelevant_files(manifest_title="manifest.txt")

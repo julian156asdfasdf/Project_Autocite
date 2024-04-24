@@ -57,19 +57,20 @@ class step2_processing:
 
         # Get all files (also from subfolders)
         files = []
-        for r, d, f in os.walk(root):
+        for r, d, f in os.walk(os.path.join(self.data, root)):
             for file in f:
-                files.append(file)
+                files.append(os.path.join(r,file))
 
         # Check if there is only one \documentclass in the folder
         doc_class_n = 0
         doc_main = None
         for file in files:
             if file.lower().endswith(".tex"): 
-                with open(os.path.join(root, file), 'r', encoding=self.encoder) as f:  # Encoding is ISO-8859-1. The only working encoder for latex.
+                with open(os.path.join(file), 'r', encoding=self.encoder) as f:  # Encoding is ISO-8859-1. The only working encoder for latex.
                     try:
                         content = str(f.read())
                         if r"\documentclass" in content or r"\documentstyle" in content:
+                            print(f"Found \documentclass or \documentstyle in {file}")
                             all_dc_idx = [m.start() for m in re.finditer(r"\\documentclass", content)]
                             for m in re.finditer(r"\\documentstyle", content):
                                 all_dc_idx.append(m.start())
@@ -95,7 +96,7 @@ class step2_processing:
             return None, None
 
         # Create a new main file in the step_2 folder
-        new_main_file = os.path.join(os.path.dirname(self.data), Path("./"+self.target), os.path.relpath(root, self.data), "main.txt")
+        new_main_file = os.path.join(Path(self.target), root, "main.txt")
         
         # Iteratively input all the \input files into the main file
         while True:
@@ -280,10 +281,6 @@ class step2_processing:
         Creates a main.txt file for each paper in the self.data directory into the self.target directory.
         """
         for root in os.listdir(self.data):
-            files = []
-            for r, d, f in os.walk(root):
-                for file in f:
-                    files.append(file)
 
             new_main_file, doc_contents = self.merge_and_clean_tex_files(root)
 
