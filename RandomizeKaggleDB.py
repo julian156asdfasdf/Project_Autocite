@@ -1,7 +1,9 @@
 import pandas as pd
 import random
 import pickle
+import json
 
+from parseBBL2 import remove_latex_commands
 
 
 def randomizeKaggleDBjson():
@@ -10,17 +12,25 @@ def randomizeKaggleDBjson():
         KaggleDB = file.readlines()
         random.seed(42)
         random.shuffle(KaggleDB)
+    
     LatexCleanedKaggleDB = []
     for i in range(len(KaggleDB)):
         row = KaggleDB[i]
         if i == len(KaggleDB) - 1:
-            dictionary = eval(row)
+            dictionary = json.loads(row)
         else:
-            dictionary = eval(row[:-1])
-        row_list = "{"
-        for key, value in dictionary.items():
-            row_list += "\"" + key + "\":\"" + value + "\","
-            #LatexCleanedKaggleDB.append(row.replace("\n", ""))
+            dictionary = json.loads(row[:-1])
+        arxiv_id = dictionary['id']
+        title = remove_latex_commands(dictionary['title'])
+        authors = remove_latex_commands(dictionary['authors'])
+        publish_date = dictionary['publish_time']
+        info = authors + " " + title + " " + publish_date
+        LatexCleanedKaggleDB.append({"arxiv_id": arxiv_id, "info": info, "title": title, "authors": authors, "publish_date": publish_date})
+    try:
+        with open("Randomized_Kaggle_Dataset.json", 'w') as file:
+            json.dump(KaggleDB, file)
+    except Exception as e:
+        print(f"Failed to save the randomized dataset with error: {e}")
 
 
 def randomizeKaggleDBpickle():
