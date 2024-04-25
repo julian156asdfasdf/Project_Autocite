@@ -4,8 +4,6 @@ from step2_processing import step2_processing
 from step1_processing import delete_empty_folders
 from RandomizeKaggleDB import randomizeKaggleDB, read_and_shuffle_KaggleDB, read_KaggleDB_Subset
 
-import random
-
 if __name__ == '__main__':
     # step 0 Initialization
     # Load Kaggle Dataset
@@ -45,8 +43,8 @@ if __name__ == '__main__':
         print("Created target folder.")
         step_2.create_main_txt()
         print("Created main.txt.")
-        # step_2.create_references_json()
-        # print("Created references.json.")
+        step_2.create_references_json()
+        print("Created references.json.")
     # End of sliding window
     delete_empty_folders(step_2.target)
 

@@ -282,7 +282,7 @@ class step2_processing:
                 file_write.close()
                 pass
             else:
-                shutil.rmtree(root.replace(str(self.data),self.target), ignore_errors=True)
+                shutil.rmtree(os.path.join(self.target, root), ignore_errors=True)
             pass
 
     def create_references_json(self):
@@ -300,7 +300,8 @@ class step2_processing:
         # Walk through directory
         for dir in os.listdir(self.data):
             parsed = {}
-            
+            if dir not in os.listdir(self.target):
+                continue
             ## LOOPING THROUGH THE DATA DIRECTORY ##
             for root, dirs, files in os.walk(os.path.join(self.data, dir)):
                 for file in files:
@@ -328,6 +329,7 @@ class step2_processing:
             ## CREATING THE JSON FILE ##
             # Dont make the json file if there are no references
             if len(parsed) == 0:
+                shutil.rmtree(os.path.join(self.target, dir), ignore_errors=True)
                 continue
             
             # Add title, arXiv-id, info and author last name as None if they are not already in the
@@ -336,7 +338,10 @@ class step2_processing:
             
             destination_dir = os.path.join(step_2_folder, dir)
             with open(os.path.join(destination_dir, "references.json"), 'w') as f:
-                json.dump(parsed, f)
+                for i, (latex_id, value) in enumerate(parsed.items()):
+                    json.dump(parsed[latex_id], f)
+                    if i != len(parsed)-1:
+                        f.write('\n')  # Add a newline after each dictionary
 
         print("Created references.json file and removed all .bib and .bbl files.")
 
@@ -346,4 +351,4 @@ if __name__ == "__main__":
     process = step2_processing("Step_1", "Step_2")
     process.create_target_folder()
     process.create_main_txt()
-    # process.create_references_json()
+    process.create_references_json()

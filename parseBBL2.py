@@ -160,28 +160,18 @@ def parsebbl(file_path = None, bbl_str = None):
             info = info[info.find("}")+1:].strip()
 
             # Subcase 1
-            # If the info contains \newblock or \newline, then parse as such
-            if r"\newblock" in cleaned_str or r"\newline" in cleaned_str:
-                # Remove urls
-                idx_url = info.find("\\url")
-                if idx_url != -1:
-                    info = info[:idx_url] + info[info.find("}", idx_url)+1:]
-                info = remove_latex_commands(info) 
-                first_author_lastname = get_first_author_lastname_from_info(info)
-
-            # Subcase 2
             # If the info starts with a curly bracket, then parse as such
-            elif info.startswith("{"):
+            if info.startswith("{"):
                 # If the info contains \eprint, then extract the arxiv_id
                 if info.find("\\eprint{") != -1:
                     arxiv_id = info.split("\\eprint{")[-1].split("}")[0]
                     continue
-                first_author_lastname = info[1:info.find("}")].split(" ")[-1] # Get the last name of the first author (It is within the first curly brackets)
+                first_author_lastname = info[1:info.find("}")].replace("{","").split(" ")[-1] # Get the last name of the first author (It is within the first curly brackets)
                 info = remove_latex_commands(info)
 
-            # Subcase 3
+            # Subcase 2
             # If the info contains \bibfield, then parse as such
-            elif "\\bibfield" in info:
+            elif "\\bibfield" in info or "\\bibinfo" in info:
                 info = info.split("\\BibitemOpen")[-1].split("\\BibitemShut")[0].strip() # Remove the \BibitemOpen and \BibitemShut commands
                 try:
                     # Get the beginning of the first author's last name 
@@ -203,15 +193,22 @@ def parsebbl(file_path = None, bbl_str = None):
                 # Remove all \bibinfo and \bibfield commands
                 while "\\bibinfo" in info:
                     idx = info.find("\\bibinfo")
-                    info = info[:idx] + info[info.find("}", idx)+1:]
+                    info = info[:idx] + info[info.find("}", idx+1)+1:]
                 while "\\bibfield" in info:
                     idx = info.find("\\bibfield")
-                    info = info[:idx] + info[info.find("}", idx)+1:]
+                    info = info[:idx] + info[info.find("}", idx+1)+1:]
                 # Remove all \url commands
                 idx_href = info.find("\\href")
                 if idx_href != -1:
                     info = info[:idx_href] + info[info.find("}", idx_href)+1:]
                 info = remove_latex_commands(info)
+            else:
+                # Remove urls
+                idx_url = info.find("\\url")
+                if idx_url != -1:
+                    info = info[:idx_url] + info[info.find("}", idx_url)+1:]
+                info = remove_latex_commands(info) 
+                first_author_lastname = get_first_author_lastname_from_info(info)
 
         # Case 2
         # If the bibitem starts with a curly bracket
@@ -227,11 +224,13 @@ def parsebbl(file_path = None, bbl_str = None):
                 info = info[:idx_url] + info[info.find("}", idx_url)+1:]
             info = remove_latex_commands(info)
             first_author_lastname = get_first_author_lastname_from_info(info)
+        else:
+            info = s
 
-
+        info = info.replace("\\textbf", "").replace("\\textit", "").replace("\\emph", "")
         info = re.sub(r'\s+', ' ', info) # Remove all extra whitespaces
         # Append the information to the dictionary
-        bbl_dict[ref_name] = {"title":None, "info": info, "first_author_lastname": first_author_lastname, "ArXiV-ID": arxiv_id}
+        bbl_dict[ref_name] = {"title":None, "info": info, "author_ln": first_author_lastname, "ArXiV-ID": arxiv_id}
 
     return bbl_dict
 

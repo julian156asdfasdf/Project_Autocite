@@ -36,9 +36,9 @@ class step0_processing:
         
         all_articles = []
         for article in self.KaggleDB[start_id:min(start_id+self.window_size, self.end_idx)]:
-            all_articles.append(article['id'])
-        arxiv_papers = pd.DataFrame(all_articles, columns=['ArXiV ID'])
-        links = list(arxiv_papers['ArXiV ID'].apply(get_eprint_link))
+            all_articles.append(article['arxiv_id'])
+        arxiv_papers = pd.DataFrame(all_articles, columns=['arxiv_id'])
+        links = list(arxiv_papers['arxiv_id'].apply(get_eprint_link))
 
         self.links = links
         self.arxiv_papers = arxiv_papers
@@ -48,7 +48,7 @@ class step0_processing:
         Uses the list of links from get_tar_links to download the papers as .tar files into the Step_0 directory.
         """
         for idx, link in enumerate(self.links, start=1):  # Just an example with `.tail()`, remove it to download all
-            paper_id = self.arxiv_papers['ArXiV ID'][idx - 1]  # Adjust index if necessary
+            paper_id = self.arxiv_papers['arxiv_id'][idx - 1]  # Adjust index if necessary
             paper_id_edit = paper_id.replace("/", "_slash")
             file_path = Path("./"+self.target) / f"{paper_id_edit}.tar"
             print(f"Downloading {paper_id} to {file_path}... " + str(idx) + "/" + str(self.window_size) + " in round: " + str(self.round_number))
