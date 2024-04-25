@@ -1,5 +1,4 @@
 import random
-import pickle
 import json
 import re
 from tqdm.auto import tqdm
@@ -65,8 +64,9 @@ def randomizeKaggleDB(filepath = "Kaggle_Dataset.json"):
                 file.write('\n')  # Add a newline after each dictionary
 
 
-def read_KaggleDB(filepath = "Randomized_Kaggle_Dataset_Subset_Physics.json"):
+def read_KaggleDB_Subset(filepath = "Randomized_Kaggle_Dataset_Subset_Physics.json"):
     # Load the json file into a list of dictionaries
+    print("Loading Kaggle Dataset... (Can take a minute or two)")
     KaggleDB = []
     try:
         with open(filepath, 'r') as file:
@@ -83,6 +83,27 @@ def read_KaggleDB(filepath = "Randomized_Kaggle_Dataset_Subset_Physics.json"):
         KaggleDB = []
     return KaggleDB
 
+def read_and_shuffle_KaggleDB(filepath = "Kaggle_Dataset.json"):
+    # Load the json file into a list of dictionaries
+    print("Loading Kaggle Dataset... (Can take a minute or two)")
+    KaggleDB = []
+    try:
+        with open("Kaggle_Dataset.json", 'r') as file:
+            KaggleDB_raw = file.readlines()
+            random.seed(42)
+            random.shuffle(KaggleDB_raw)
+            rows = len(KaggleDB_raw)
+            for i in tqdm(range(rows)):
+                if i == rows - 1:
+                    dictionary = json.loads(KaggleDB_raw[i])
+                else:
+                    dictionary = json.loads(KaggleDB_raw[i][:-1])
+                KaggleDB.append(dictionary)
+    except Exception as e:
+        print(f"Failed to load the randomized dataset with error: {e}")
+        KaggleDB = []
+    return KaggleDB
+
 if __name__ == '__main__':
     randomizeKaggleDB()
-    KaggleDB = read_KaggleDB()
+    KaggleDB = read_KaggleDB_Subset()

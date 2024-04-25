@@ -1,4 +1,3 @@
-import time
 import re
 
 def remove_latex_commands(text):
@@ -238,6 +237,7 @@ def parsebbl(file_path = None, bbl_str = None):
 
 
 if __name__ == "__main__":
+    import time
     # All the test files
     filepaths = [
         "Step_1/0809.0840/heralhc_jhepwork.bbl", 

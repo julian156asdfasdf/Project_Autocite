@@ -2,23 +2,20 @@ from step0_processing import step0_processing
 from step1_processing import step1_processing
 from step2_processing import step2_processing
 from step1_processing import delete_empty_folders
+from RandomizeKaggleDB import randomizeKaggleDB, read_and_shuffle_KaggleDB, read_KaggleDB_Subset
 
 import random
 
 if __name__ == '__main__':
     # step 0 Initialization
     # Load Kaggle Dataset
-    print("Loading Kaggle Dataset... (Should take around 30)")
-    with open("Kaggle_Dataset.json", 'r') as file:
-        KaggleDB = file.readlines()
-        random.seed(42)
-        random.shuffle(KaggleDB)
+    KaggleDB = read_KaggleDB_Subset(filepath="Randomized_Kaggle_Dataset_Subset_Physics.json")
 
     step_0_target_name = "Step_0"
     step_1_target_name = "Step_1"
     step_2_target_name = "Step_2"
     # Remember to update the start_idx, window_size and end_idx to the desired values
-    step_0 = step0_processing(KaggleDB=KaggleDB, target_name=step_0_target_name, start_idx=200, window_size=100, end_idx=400)
+    step_0 = step0_processing(KaggleDB=KaggleDB, target_name=step_0_target_name, start_idx=0, window_size=50, end_idx=200)
     step_1 = step1_processing(directory = step_0_target_name, target_name = step_1_target_name)
     step_2 = step2_processing(directory = step_1_target_name, target_name = step_2_target_name)
 

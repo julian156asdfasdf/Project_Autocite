@@ -55,43 +55,40 @@ class step2_processing:
             
             return cleaned_tex_string
 
-        # Get all files (also from subfolders)
-        files = []
-        for r, d, f in os.walk(os.path.join(self.data, root)):
-            for file in f:
-                files.append(os.path.join(r,file))
+        # Get all files (not from subfolders as the main.tex file is assumed to be in the root folder)
+        files = os.listdir(os.path.join(self.data, root))
+        files = [os.path.join(self.data,root,file) for file in files if file.endswith(".tex")]
 
         # Check if there is only one \documentclass in the folder
         doc_class_n = 0
         doc_main = None
         for file in files:
-            if file.lower().endswith(".tex"): 
-                with open(os.path.join(file), 'r', encoding=self.encoder) as f:  # Encoding is ISO-8859-1. The only working encoder for latex.
-                    try:
-                        content = str(f.read())
-                        if r"\documentclass" in content or r"\documentstyle" in content:
-                            print(f"Found \documentclass or \documentstyle in {file}")
-                            all_dc_idx = [m.start() for m in re.finditer(r"\\documentclass", content)]
-                            for m in re.finditer(r"\\documentstyle", content):
-                                all_dc_idx.append(m.start())
-                            # Check if there is a % before the \documentclass or \documentstyle
-                            true_dc_idx = []
-                            for idx in all_dc_idx:
-                                if r"%" in content[max(content.rfind("\n", 0, idx,),0):idx]:
-                                    continue
-                                else:
-                                    true_dc_idx.append(idx)
-                            # If there is more than 0 \documentclass or \documentstyle in the file, set the content as the main file and increment the amount of files with \documentclass or \documentstyle in root
-                            if len(true_dc_idx) > 0:
-                                doc_class_n += 1
-                                doc_main = content
-                    except UnicodeDecodeError:
-                        print(f"Error reading file in merge_tex_files: {file}")
-                        # Delete the folder if there is an error reading a file in it
-                        return None, None 
+            with open(file, 'r', encoding=self.encoder) as f:  # Encoding is ISO-8859-1. The only working encoder for latex.
+                try:
+                    content = str(f.read())
+                    if r"\documentclass" in content or r"\documentstyle" in content:
+                        #print(f"Found \documentclass or \documentstyle in {file}")
+                        all_dc_idx = [m.start() for m in re.finditer(r"\\documentclass", content)]
+                        for m in re.finditer(r"\\documentstyle", content):
+                            all_dc_idx.append(m.start())
+                        # Check if there is a % before the \documentclass or \documentstyle
+                        true_dc_idx = []
+                        for idx in all_dc_idx:
+                            if r"%" in content[max(content.rfind("\n", 0, idx,),0):idx]:
+                                continue
+                            else:
+                                true_dc_idx.append(idx)
+                        # If there is more than 0 \documentclass or \documentstyle in the file, set the content as the main file and increment the amount of files with \documentclass or \documentstyle in root
+                        if len(true_dc_idx) > 0:
+                            doc_class_n += 1
+                            doc_main = content
+                except:
+                    print(f"Error reading file in merge_tex_files: {file}")
+                    # Delete the folder if there is an error reading a file in it
+                    return None, None 
         # If there is not 1 \documentclass in the folder, print an error and continue to the next folder
         if doc_class_n != 1:
-            print(f"Error: {doc_class_n} \documentclass in {root}. Must be 1.")
+            print(f"Warning (can be ignored): {doc_class_n} \documentclass in {root}. Must be 1.")
             # Delete the folder if there is an error reading a file in it
             return None, None
 
@@ -100,37 +97,28 @@ class step2_processing:
         
         # Iteratively input all the \input files into the main file
         while True:
+            doc_main = clean_tex_string(doc_main)
             all_inputs_idx = [m.start() for m in re.finditer(r"\\input\{(.+?)\}", doc_main)] # Finds all \input{...}
-            # Check if there is a % before the \input
-            true_inputs_idx = []
-            for idx in all_inputs_idx:
-                if "%" in doc_main[doc_main.rfind("\n", 0, idx):idx]:
-                    continue
-                else:
-                    true_inputs_idx.append(idx)
+            
             # If there are no \input files, break the loop
-            if len(true_inputs_idx) == 0:
+            if len(all_inputs_idx) == 0:
                 break
             else:
                 # Iteratively input all the \input files into the main file from the last to the first
-                for i in range(len(true_inputs_idx)-1, -1, -1):
-                    idx = true_inputs_idx[i]
+                for i in reversed(range(len(all_inputs_idx))):
+                    idx = all_inputs_idx[i]
                     end_idx = doc_main.find("}", idx)
                     # the file being inputted:
-                    file_path = os.path.join(root, doc_main[idx+7:end_idx].replace("/", "\\") + (".tex" if not doc_main[idx+7:end_idx].endswith((".tex",".bbl",".bib")) else ""))
+                    input_path_name = doc_main[idx+7:end_idx].replace("/", "\\") + (".tex" if not doc_main[idx+7:end_idx].endswith((".tex",".bbl",".bib")) else "")
+                    file_path = os.path.join(self.data, root, input_path_name)
                     # Read the file and input it into the main file
                     try:
-                        input_file = open(file_path, 'r', encoding=self.encoder)
-                        try:
+                        with open(file_path, 'r', encoding=self.encoder) as input_file:  # Encoding is ISO-8859-1. The only working encoder for latex.
                             input_content = str(input_file.read())
                             doc_main = doc_main[:idx] + input_content + doc_main[end_idx+1:]
-                        except UnicodeDecodeError:
-                            print(f"Error reading file for inputting in merge_tex_files: {file_path}")
-                            continue 
-                        input_file.close()
                     except Exception as e:
                         doc_main = doc_main[:idx+4] + "l" + doc_main[idx+5:]
-                        print(f"Error for inputting path in merge_tex_files: {file_path}. Error: {e}")
+                        print(f"Warning (can be ignored) for inputting path in merge_tex_files: {file_path}.")
                         continue
         return new_main_file, clean_tex_string(doc_main)
 
@@ -281,7 +269,6 @@ class step2_processing:
         Creates a main.txt file for each paper in the self.data directory into the self.target directory.
         """
         for root in os.listdir(self.data):
-
             new_main_file, doc_contents = self.merge_and_clean_tex_files(root)
 
             if new_main_file is not None:
@@ -296,7 +283,7 @@ class step2_processing:
                 pass
             else:
                 shutil.rmtree(root.replace(str(self.data),self.target), ignore_errors=True)
-
+            pass
 
     def create_references_json(self):
         """
@@ -356,13 +343,7 @@ class step2_processing:
 
 
 if __name__ == "__main__":
-    process = step2_processing("Step_t", "Step_f")
-    process.create_references_json()
-    # process.create_target_folder()
-    # process.create_main_txt()
-    # #process.merge_tex_files()
-    # process.extract_references()
-    # process.remove_bib_from_main()
-    # process.move_references() 
-    # delete_empty_folders(process.target)
+    process = step2_processing("Step_1", "Step_2")
+    process.create_target_folder()
+    process.create_main_txt()
     # process.create_references_json()
