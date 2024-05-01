@@ -338,10 +338,13 @@ class step2_processing:
             
             destination_dir = os.path.join(step_2_folder, dir)
             with open(os.path.join(destination_dir, "references.json"), 'w') as f:
-                for i, (latex_id, value) in enumerate(parsed.items()):
-                    json.dump(parsed[latex_id], f)
-                    if i != len(parsed)-1:
-                        f.write('\n')  # Add a newline after each dictionary
+                json.dump(parsed,f)
+                
+                #
+                #for i, (latex_id, value) in enumerate(parsed.items()):
+                #    json.dump(parsed[latex_id], f)
+                #    if i != len(parsed)-1:
+                #        f.write('\n')  # Add a newline after each dictionary
 
         print("Created references.json file and removed all .bib and .bbl files.")
 
