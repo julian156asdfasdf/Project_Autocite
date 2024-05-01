@@ -2,6 +2,7 @@ from pathlib import Path
 import pandas as pd
 import os
 from collections import defaultdict
+import re
 
 # Match step 2 references.tex titles with kaggle db,
 # Extract ArxivID and abstract
@@ -27,17 +28,16 @@ class proccessing_3:
         """
 
         for index, row in self.kaggle_db.iterrows():
-            authors = row['authors']
             arxiv_id = row['arxiv_id']
-            for author in authors.split(','):
-                self.author_db[author].add(arxiv_id)
-        
-        # Problem is that the authors keys are not good example
-        # the following are the different keys:  " 'Eric H'ebrard"," 'Eric Herbert (LIED)"," 'Eric Herbert and Pierre-Philippe Cortet",
-        # Can be seen when doing sorted(self.author_db)
-        # possible solution, make it a set instead of list, and if two keys contain the same, then union between long and short key on the short one
-        # do not collapse the long one as it can run multiple times
-        # possible implementation above, problem is that it runs incredibly slow
+            authors = row['authors']
+            authors_list = authors.split(',')
+            for author in authors_list:
+                if author[:4] == ' and ':
+                    author = author[5:]
+                for auth in author.split(' and '):
+                    match = re.search(r'\w+$', auth)
+                    if match:
+                        self.author_db[match.group()].add(arxiv_id)
 
         #i = 50
         #succesfull_iterations = []
@@ -72,4 +72,3 @@ class proccessing_3:
 if __name__ == "__main__":
     processing = proccessing_3(Path('Randomized_Kaggle_Dataset_Subset_Physics.json'), Path('Step_2'))
     authors = processing.subdivide_by_author()
-    score = processing.find_authors_refs()
