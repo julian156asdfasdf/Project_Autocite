@@ -20,9 +20,8 @@ class step2_processing:
         """
         Copies the directory structure of the self.data directory and appends it to the self.target directory.
         """
-        for root, dirs, files in os.walk(self.data):
-            relative_path = os.path.relpath(root, self.data)
-            new_folder = os.path.join(self.target, relative_path)
+        for dir in os.listdir(self.data):
+            new_folder = os.path.join(self.target, dir)
             os.makedirs(new_folder, exist_ok=True)
     
 
@@ -122,6 +121,7 @@ class step2_processing:
                         continue
         return new_main_file, clean_tex_string(doc_main)
 
+
     def split_cites(self, doc_contents):
         """
         If an instance of a citation contains multiple sources, split them into separate instances, e.g., \cite{a,b} -> \cite{a} \cite{b}.
@@ -132,7 +132,6 @@ class step2_processing:
         Returns:
         doc_contents: The contents of the .tex file with the citations split up.
         """
-        
         cites = re.findall(r"\\cite{.*?}", doc_contents)
         for cite in cites:
             if "," in cite:
@@ -162,6 +161,7 @@ class step2_processing:
                 doc_contents = doc_contents.replace(cite, ' '.join(split_cites)) 
         
         return doc_contents
+
 
     def isolate_cites(self, doc_contents):
         """
@@ -285,6 +285,7 @@ class step2_processing:
                 shutil.rmtree(os.path.join(self.target, root), ignore_errors=True)
             pass
 
+
     def create_references_json(self):
         """
         Creates a references.json file for each paper in the self.data directory into the self.target directory.
@@ -346,9 +347,8 @@ class step2_processing:
         print("Created references.json file and removed all .bib and .bbl files.")
 
 
-
 if __name__ == "__main__":
-    process = step2_processing("Step_1", "Step_2")
+    process = step2_processing("Step_a", "Step_b")
     process.create_target_folder()
     process.create_main_txt()
     process.create_references_json()
