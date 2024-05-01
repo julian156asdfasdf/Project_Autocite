@@ -33,7 +33,7 @@ def remove_latex_commands(text):
             if idx >= equation_indexes[i][0]-text_subtraction_size and idx <= equation_indexes[i][1]-text_subtraction_size:
                 return True
         return False
-    
+    text = text.replace("\'", "").replace("\`", "").replace("\´", "")
     # Remove all latex commands
     text_subtraction_size = 0
     idx_backslash = text.find("\\")
@@ -65,11 +65,11 @@ def remove_latex_commands(text):
                 # If the new break_char appears closer to the backslash than the previous one, then update the end_backslash_idx
                 if text.find(break_char, idx_backslash+1) < end_backslash_idx and text.find(break_char, idx_backslash+1) > idx_backslash:
                     end_backslash_idx = text.find(break_char, idx_backslash+1)
-                    if break_char in [" ", "`", "´", "\""]:
+                    if break_char in [" ", "\"", "`", "´", "\'"]: # Remove the name of command and break_char
                         extra_chars_removed = 1
-                    elif break_char in ["\\", "}", "_", "^", "`", "´"]:  # In these cases keep the name of the command
+                    elif break_char in ["\\", "}", "_", "^"]:  # In these cases keep the name of the command
                         extra_chars_removed = -(end_backslash_idx-idx_backslash)+1
-                    else:
+                    else: # Only remove the name of the command but keep break_char
                         extra_chars_removed = 0
         
         text = text[:idx_backslash] + text[end_backslash_idx+extra_chars_removed:] # Remove the command from the text
@@ -239,14 +239,7 @@ if __name__ == "__main__":
     import time
     # All the test files
     filepaths = [
-        "Step_1/0809.0840/heralhc_jhepwork.bbl", 
-        "Step_1/1601.03559/paper_info.bbl", 
-        "Step_1/1301.6295/GAMPFixPoint.bbl", 
-        "Step_1/1411.7988/Thom.bbl", 
-        "Step_1/1410.6029/AARevSpringer.bbl", 
-        "Step_1/0912.0308/QuantitativeNon-abelianIdempotent.bbl", 
-        "Step_1/1506.06908/Meister15.bbl", 
-        "Step_1/1612.02830/CWBL1.tex"
+        "Step_1/1403.1499/Manuscript.tex"
     ]
     bbl_dict = {}
     t0 = time.time()
@@ -258,8 +251,8 @@ if __name__ == "__main__":
     
     bad_authors = []
     for key, value in bbl_dict.items():
-        print(f"{key=}, {value['first_author_lastname']=}, {value['info'][:30]}")
-        if value["first_author_lastname"] is None:
+        print(f"{key=}, {value['author_ln']=}, {value['info'][:30]}")
+        if value["author_ln"] is None:
             bad_authors.append(key)
     print(f"\nTime taken to process {len(filepaths)} bbl/tex files:", seconds)
     print(f"\nNo authors: {bad_authors}")

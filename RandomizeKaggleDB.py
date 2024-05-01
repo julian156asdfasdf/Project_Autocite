@@ -66,7 +66,7 @@ def randomizeKaggleDB(filepath = "Kaggle_Dataset.json"):
 
 def read_json_DB(filepath = "Randomized_Kaggle_Dataset_Subset_Physics.json"):
     # Load the json file into a list of dictionaries
-    print("Loading Kaggle Dataset... (Can take a minute or two)")
+    #print("Loading json Dataset... (Can take a minute or two)")
     KaggleDB = []
     try:
         with open(filepath, 'r') as file:
@@ -107,3 +107,5 @@ def read_and_shuffle_KaggleDB(filepath = "Kaggle_Dataset.json"):
 if __name__ == '__main__':
     randomizeKaggleDB()
     KaggleDB = read_json_DB()
+    new_author = remove_latex_commands(KaggleDB[0]['authors'])
+    pass
