@@ -13,7 +13,7 @@ if __name__ == '__main__':
     step_1_target_name = "Step_1"
     step_2_target_name = "Step_2"
     # Remember to update the start_idx, window_size and end_idx to the desired values
-    step_0 = step0_processing(KaggleDB=KaggleDB, target_name=step_0_target_name, start_idx=0, window_size=50, end_idx=200)
+    step_0 = step0_processing(KaggleDB=KaggleDB, target_name=step_0_target_name, start_idx=0, window_size=200, end_idx=200)
     step_1 = step1_processing(directory = step_0_target_name, target_name = step_1_target_name)
     step_2 = step2_processing(directory = step_1_target_name, target_name = step_2_target_name)
 
