@@ -22,8 +22,8 @@ class proccessing_3:
         i = 0
         for authors in self.kaggle_db['authors']:
             for author in authors.split(','):
-                author_db[author].append(self.kaggle_db[self.kaggle_db['authors']==authors])
-                
+                author_db[author].append(self.kaggle_db[self.kaggle_db['authors']==authors]['arxiv_id'])
+
             i+=1
             if i == 1000:
                 break
