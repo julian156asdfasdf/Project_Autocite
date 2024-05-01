@@ -64,7 +64,7 @@ def randomizeKaggleDB(filepath = "Kaggle_Dataset.json"):
                 file.write('\n')  # Add a newline after each dictionary
 
 
-def read_KaggleDB_Subset(filepath = "Randomized_Kaggle_Dataset_Subset_Physics.json"):
+def read_json_DB(filepath = "Randomized_Kaggle_Dataset_Subset_Physics.json"):
     # Load the json file into a list of dictionaries
     print("Loading Kaggle Dataset... (Can take a minute or two)")
     KaggleDB = []
@@ -106,4 +106,4 @@ def read_and_shuffle_KaggleDB(filepath = "Kaggle_Dataset.json"):
 
 if __name__ == '__main__':
     randomizeKaggleDB()
-    KaggleDB = read_KaggleDB_Subset()
+    KaggleDB = read_json_DB()
