@@ -92,7 +92,7 @@ class step2_processing:
             return None, None
 
         # Create a new main file in the step_2 folder
-        new_main_file = os.path.join(Path(self.target), root, "main.txt")
+        new_main_file = os.path.join(Path(self.target), root, root+".txt")
         
         # Iteratively input all the \input files into the main file
         while True:
@@ -182,53 +182,6 @@ class step2_processing:
         return doc_contents
 
 
-    def extract_references(self, file):
-        """
-        Helper function. Extracts the references from the given .tex file and returns it as a string
-       
-        Arguments:
-        The file path [str]
-       
-        Returns:
-        bibliography section [str], if it found any,
-        else empty string [str]
-        """
-        with open(file, 'r', encoding=self.encoder) as f:
-            try:
-                text_content = f.read()
-            except UnicodeDecodeError:
-                print(f"Error reading file: {file}")
-                return ""
-       
-        # Find the start and end indices of the bibliography section
-        start_index = text_content.find(r"\begin{thebibliography}")
-        end_index = text_content.find(r"\end{thebibliography}")
-       
-        # Check if the bibliography section exists in the tex_content
-        if start_index != -1 and end_index != -1:
-            # Extract the bibliography section
-            bibliography_section = text_content[start_index:end_index + len(r"\end{thebibliography}")]
-            return bibliography_section
-        return ""
-    
-
-    def remove_bib_from_main(self):
-        for root, dirs, files in os.walk(self.encoder):
-            main_file_name = "main.txt"
-            if os.path.isfile(os.path.join(root, main_file_name)):
-                file = open(os.path.join(root, main_file_name), 'r', encoding=self.encoder)
-                doc_content = file.read()
-                print(doc_content)
-                file.close()
-                ref_start = doc_content.find(r"\begin{thebibliography}")
-                ref_end = doc_content.find(r"\end{thebibliography}")+21
-                if ref_start != -1 and ref_start != -1:
-                    doc_content = doc_content[:ref_start] + doc_content[ref_end:]
-                file = open(os.path.join(root, main_file_name), 'w', encoding=self.encoder)
-                file.write(str(doc_content))
-                file.close()
-
-
     def move_references(self):
         """
         Copies the references of .bbl and .bib files already in the self.data directory
@@ -285,6 +238,35 @@ class step2_processing:
                 shutil.rmtree(os.path.join(self.target, root), ignore_errors=True)
             pass
 
+    def extract_references(self, file):
+        """
+        Helper function. Extracts the references from the given .tex file and returns it as a string
+       
+        Arguments:
+        The file path [str]
+       
+        Returns:
+        bibliography section [str], if it found any,
+        else empty string [str]
+        """
+        with open(file, 'r', encoding=self.encoder) as f:
+            try:
+                text_content = f.read()
+            except UnicodeDecodeError:
+                print(f"Error reading file: {file}")
+                return ""
+       
+        # Find the start and end indices of the bibliography section
+        start_index = text_content.find(r"\begin{thebibliography}")
+        end_index = text_content.find(r"\end{thebibliography}")
+       
+        # Check if the bibliography section exists in the tex_content
+        if start_index != -1 and end_index != -1:
+            # Extract the bibliography section
+            bibliography_section = text_content[start_index:end_index + len(r"\end{thebibliography}")]
+            return bibliography_section
+        return ""
+
 
     def create_references_json(self):
         """
@@ -322,7 +304,7 @@ class step2_processing:
                         parsed.update(parsebbl(bbl_str=bbl_content))
 
             ## LOOKING AT THE TARGET DIRECTORY ##
-            file_directory = os.path.join(os.path.join(step_2_folder, dir), "main.txt")
+            file_directory = os.path.join(os.path.join(step_2_folder, dir), dir+".txt")
             extracted_ref = self.extract_references(file_directory)
             if extracted_ref != "": # if it found some references in the .txt file, update dict
                 parsed.update(parsebbl(bbl_str=extracted_ref))
@@ -348,7 +330,7 @@ class step2_processing:
 
 
 if __name__ == "__main__":
-    process = step2_processing("Step_a", "Step_b")
+    process = step2_processing("Step_1", "Step_2")
     process.create_target_folder()
     process.create_main_txt()
     process.create_references_json()
