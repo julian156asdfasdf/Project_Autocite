@@ -66,8 +66,10 @@ class step0_processing:
 
 
 if __name__ == "__main__":
-    from RandomizeKaggleDB import randomizeKaggleDB, read_and_shuffle_KaggleDB, read_KaggleDB_Subset
-    KaggleDB = read_KaggleDB_Subset(filepath="Randomized_Kaggle_Dataset_Subset_Physics.json")
+    from RandomizeKaggleDB import randomizeKaggleDB, read_and_shuffle_KaggleDB, read_json_DB
+    #read_KaggleDB_Subset
+    # KaggleDB = read_KaggleDB_Subset(filepath="Randomized_Kaggle_Dataset_Subset_Physics.json")
+    KaggleDB = read_json_DB(filepath="Randomized_Kaggle_Dataset_Subset_Physics.json")
     
     step_0 = step0_processing(KaggleDB = KaggleDB, target_name="Step_0", start_idx=0, window_size=10, end_idx=100)
 
