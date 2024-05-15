@@ -7,7 +7,7 @@ from RandomizeKaggleDB import read_json_DB
 import json
 import pickle
 from pylatexenc.latex2text import LatexNodes2Text
-from fuzzywuzzy import fuzz
+from thefuzz import fuzz
 
 ACCENT_CONVERTER = LatexNodes2Text()
 

@@ -4,7 +4,7 @@ import os
 from collections import defaultdict
 import re
 from RandomizeKaggleDB import read_json_DB
-from fuzzywuzzy import fuzz
+from thefuzz import fuzz
 
 # Match step 2 references.tex titles with kaggle db,
 # Extract ArxivID and abstract
