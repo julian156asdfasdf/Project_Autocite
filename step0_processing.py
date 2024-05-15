@@ -5,10 +5,11 @@ import os
 import pandas as pd
 import numpy as np
 import shutil
+from main import KAGGLEDB, ARXIV_IDS
 
 
 class step0_processing:
-    def __init__(self, KaggleDB, target_name="Step_0",start_idx=0, window_size=100, end_idx=100):
+    def __init__(self, target_name="Step_0",start_idx=0, window_size=100, end_idx=100):
         self.target = target_name
         self.tar_links = []
         self.arxiv_papers = None
@@ -17,7 +18,6 @@ class step0_processing:
         self.window_size = window_size
         self.end_idx = end_idx
         self.rounds = int(np.ceil((end_idx-start_idx)/window_size))
-        self.KaggleDB = KaggleDB
 
 
     def create_target_folder(self):
@@ -34,10 +34,8 @@ class step0_processing:
         def get_eprint_link(paper):
             return f'http://export.arxiv.org/e-print/{paper}'
         
-        all_articles = []
-        for article in self.KaggleDB[start_id:min(start_id+self.window_size, self.end_idx)]:
-            all_articles.append(article['arxiv_id'])
-        arxiv_papers = pd.DataFrame(all_articles, columns=['arxiv_id'])
+        all_article_ids = ARXIV_IDS[start_id:min(start_id+self.window_size, self.end_idx)]
+        arxiv_papers = pd.DataFrame(all_article_ids, columns=['arxiv_id'])
         links = list(arxiv_papers['arxiv_id'].apply(get_eprint_link))
 
         self.links = links
@@ -65,11 +63,13 @@ class step0_processing:
                 print(f"Failed to download {link}")
 
 
-if __name__ == "__main__":
-    from RandomizeKaggleDB import randomizeKaggleDB, read_and_shuffle_KaggleDB, read_KaggleDB_Subset
-    KaggleDB = read_KaggleDB_Subset(filepath="Randomized_Kaggle_Dataset_Subset_Physics.json")
-    
-    step_0 = step0_processing(KaggleDB = KaggleDB, target_name="Step_0", start_idx=0, window_size=10, end_idx=100)
+if __name__ == "__main__":    
+    from RandomizeKaggleDB import read_json_DB
+
+    KAGGLEDB = read_json_DB(filepath="Randomized_Kaggle_Dataset_Subset_physics_math.json")
+    ARXIV_IDS = list(KAGGLEDB.keys())
+
+    step_0 = step0_processing(target_name="Step_0", start_idx=0, window_size=10, end_idx=100)
 
     # Create sliding window for step 0-2
     for i in range(step_0.rounds):
