@@ -8,6 +8,7 @@ if __name__ == '__main__':
     from step0_processing import step0_processing
     from step1_processing import step1_processing
     from step2_processing import step2_processing
+    from step3_processing import step3_processing
     from step1_processing import delete_empty_folders
 
     # step 0 Initialization
@@ -51,6 +52,5 @@ if __name__ == '__main__':
     delete_empty_folders(step_2.target)
 
     # step 3 Match references, find citations and create dataset
-    
     
     
