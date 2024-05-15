@@ -4,12 +4,7 @@ import os
 from collections import defaultdict
 import re
 from RandomizeKaggleDB import read_json_DB
-import json
-import pickle
-from pylatexenc.latex2text import LatexNodes2Text
 from fuzzywuzzy import fuzz
-
-ACCENT_CONVERTER = LatexNodes2Text()
 
 # Match step 2 references.tex titles with kaggle db,
 # Extract ArxivID and abstract
@@ -26,12 +21,7 @@ class proccessing_3:
         self.author_db = defaultdict(set)
 
     def regex_on_author(self, author):
-        '''
-        Arg: Author string
-        Output: subset of string, best guess on author id
-
-        uses regex and splitting of string to attempt to find the correct author in a disorganized list
-        '''
+        # helper class that does regex on an author and returns
         if not author:
             return author
         if len(author)>6:
@@ -43,23 +33,22 @@ class proccessing_3:
                 author = match.group().lower()
         return author
     
-    def infobbl_to_article_name(self, info):
-        '''
-        Arg: info element of bbl file
-        Output:
-        Likewise the regex on author, attempts to find the article name, 
-        based on a disorganized info element of bbl file
-        '''
+
+    def regex_on_info(self, info):
         if not info:
             return info
         info_list = []
         for poss_title in info.split(';'):
-            info_list.append(poss_title)
+            for split_title in poss_title.split(','):
+                info_list.append(split_title)
         
         target = max(info_list, key = len)
 
         return target
-    
+
+
+
+
     def subdivide_by_author(self):
         # method 1, each key is name of author
         for _, row in self.kaggle_db.iterrows():
@@ -96,15 +85,8 @@ class proccessing_3:
         #        print(author)
 
     def fuzzy_string_match(self,target, poss_match_list):
-        '''
-        Arg: target to match 
-        Out: list of possible matches
-
-        Finds the the highest match to target from a list of possible candidates
-        '''
         poss_match_list = list(poss_match_list)
         best_match = (0,poss_match_list[0])
-
         for index, article in enumerate(poss_match_list):
             ratio = fuzz.ratio(target, article)
             if ratio > best_match[0]:
@@ -112,16 +94,13 @@ class proccessing_3:
         
         return poss_match_list[best_match[0]]
 
+    
        
-
 
     def find_authors_refs(self):
         """ 
-        Arg: None
-        Output: Key metrics on performance and which articles worked and which didnt even have info
-
-        runes through all references.json, where it goes through each cite
-        and attempts to find the arxiv id of the cite.
+        This function does not work yet
+        Takes all of the references.json, and sees how many can be found in auther_db
         """
         N_total, N_hits = 0, 0
         None_articles = []
@@ -139,16 +118,14 @@ class proccessing_3:
                 if not author:
                     N_none+=1
                     None_articles.append(dir)
-
                 if author_regex in self.author_db:
                     if ref_json[0][key]['title']:
                         title = ref_json[0][key]['title']
                         ref_json[0][key]['ArXiV-ID'] = self.fuzzy_string_match(title,self.author_db[author_regex])
                         it_worked.append(ref_json[0][key]['ArXiV-ID'], info)
 
-
                     elif ref_json[0][key]['info']:
-                        info = self.infobbl_to_article_name(ref_json[0][key]['info'])
+                        info = self.regex_on_info(ref_json[0][key]['info'])
                         ref_json[0][key]['ArXiV-ID'] = self.fuzzy_string_match(info,self.author_db[author_regex])
                         it_worked.append((ref_json[0][key]['ArXiV-ID'], info, ref_json[0][key]['info']))
                     N_hits += 1
@@ -159,90 +136,6 @@ class proccessing_3:
 
 
 
-
-
-def map_context(main_txt, ref_json, dataset_pkl='dataset.pkl', context_size=300):
-    """
-    Maps the context of a citation in a .txt file to the corresponding arXivID and adds it to a dataset.pkl file along with the main_txt and arXivID.
-
-    Arguments:
-    main_txt: The .txt file containing the citations and main text.
-    ref_json: The .json file containing the mapping between LaTeXID and arXivID.
-    dataset_pkl: The .pkl file containing the dataset.
-    context_size: The maximum size of the context.
-
-    Returns:
-    None
-    """
-
-    latex_commands = ['\\begin{', '\\cite{', '\\citet{', '\\citep{', '\\footcite{', '\\end{', 
-                    '\\figure{', '\\includegraphics{', '\\includegraphics[', '\\label{', '\\ref{', '\\section{', 
-                    '\\subsection{', '\\subsubsection{', '\\textcolor{', '\\textsubscript{', 
-                    '\\textsuperscript']
-
-    with open(main_txt, 'r') as f:
-        text = f.read()
-
-    with open(ref_json, 'r') as f:
-        ref_dict = json.load(f)
-
-    # If the dataset_pkl file does not exist, create an empty list
-    try:
-        with open(dataset_pkl, 'rb') as f:
-            dataset = pickle.load(f)
-    except:
-        dataset = []
-
-    # with open(dataset_pkl, 'rb') as f:
-    #     dataset = pickle.load(f)
-
-    # Find the LaTeXID in the text and extract the context
-    for LaTeXID, arXivID in ref_dict.items():
-        if LaTeXID in text:
-            if text.index(LaTeXID) > 2000: # Limit the context to 2000 characters before the LaTeXID
-                context = text[text.index(LaTeXID)-2000:text.index(LaTeXID)]
-            else:
-                context = text[:text.index(LaTeXID)]
-
-            context = context.split() # Tokenization
-            new_context = []
-
-            # Connect the tokens that are part of the same command
-            for i, token in enumerate(context):
-                if '{' in token:
-                    j = i
-                    while j < len(context) and '}' not in context[j]:
-                        j += 1
-                    new_context.append(' '.join(context[i:j+1]))
-                elif any('{' in token for token in new_context) and any('}' in token for token in context[i:]):
-                    continue
-                else:
-                    new_context.append(token)
-
-            # Clean the context
-            new_context = [token for token in new_context if not any(command in token for command in latex_commands)]
-            new_context = [ACCENT_CONVERTER.latex_to_text(token) for token in new_context]
-            new_context = [token.strip() for token in new_context]
-            new_context = [token for token in new_context if token]
-            new_context = ' '.join(new_context)
-
-            # Limit the context size
-            if len(new_context) > context_size:
-                new_context = new_context[:context_size]
-
-            # Append the context to the dataset
-            dataset.append([main_txt[:-4], arXivID, new_context])
-
-    # Pickle the dataset.pkl file
-    with open(dataset_pkl, 'wb') as f:
-        pickle.dump(dataset, f)
-
-    print(f"Context for {main_txt[:-4]} has been added to the dataset.pkl file.")
-
-    return None
-
-
-
 if __name__ == "__main__":
     kaggle_db_path = Path('Randomized_Kaggle_Dataset_Subset_Physics.json')
     processing = proccessing_3(kaggle_db_path, Path('Step_2'))
@@ -250,5 +143,6 @@ if __name__ == "__main__":
     N_total, N_hits, N_none, None_articles, it_worked = processing.find_authors_refs()
 
     print(N_total, N_hits, N_none)
-    print(f'None_articles:{None_articles}')
-    print(f'It_worked: {it_worked}')
+    print(it_worked)
+    print(None_articles)
+

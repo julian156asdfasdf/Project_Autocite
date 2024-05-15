@@ -29,8 +29,15 @@ def map_context(main_txt, ref_json, dataset_pkl='dataset.pkl', context_size=300)
     with open(ref_json, 'r') as f:
         ref_dict = json.load(f)
 
-    with open(dataset_pkl, 'rb') as f:
-        dataset = pickle.load(f)
+    # If the dataset_pkl file does not exist, create an empty list
+    try:
+        with open(dataset_pkl, 'rb') as f:
+            dataset = pickle.load(f)
+    except:
+        dataset = []
+
+    # with open(dataset_pkl, 'rb') as f:
+    #     dataset = pickle.load(f)
 
     # Find the LaTeXID in the text and extract the context
     for LaTeXID, arXivID in ref_dict.items():
