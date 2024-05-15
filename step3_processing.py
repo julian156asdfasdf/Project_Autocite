@@ -9,6 +9,7 @@ import pickle
 from pylatexenc.latex2text import LatexNodes2Text
 from fuzzywuzzy import fuzz
 from main import KAGGLEDB, ARXIV_IDS
+from thefuzz import fuzz
 
 ACCENT_CONVERTER = LatexNodes2Text()
 
