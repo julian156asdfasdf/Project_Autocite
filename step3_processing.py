@@ -7,6 +7,7 @@ from RandomizeKaggleDB import read_json_DB
 import json
 import pickle
 from pylatexenc.latex2text import LatexNodes2Text
+from fuzzywuzzy import fuzz
 
 ACCENT_CONVERTER = LatexNodes2Text()
 
@@ -25,7 +26,12 @@ class proccessing_3:
         self.author_db = defaultdict(set)
 
     def regex_on_author(self, author):
-        # helper class that does regex on an author and returns
+        '''
+        Arg: Author string
+        Output: subset of string, best guess on author id
+
+        uses regex and splitting of string to attempt to find the correct author in a disorganized list
+        '''
         if not author:
             return author
         if len(author)>6:
@@ -36,6 +42,24 @@ class proccessing_3:
             if match:
                 author = match.group().lower()
         return author
+    
+    def infobbl_to_article_name(self, info):
+        '''
+        Arg: info element of bbl file
+        Output:
+        Likewise the regex on author, attempts to find the article name, 
+        based on a disorganized info element of bbl file
+        '''
+        if not info:
+            return info
+        info_list = []
+        for poss_title in info.split(';'):
+            for split_title in poss_title.split(','):
+                info_list.append(split_title)
+        
+        target = max(info_list, key = len)
+
+        return target
     
     def subdivide_by_author(self):
         # method 1, each key is name of author
@@ -72,17 +96,39 @@ class proccessing_3:
         #    for author in ref_json['author_ln']:
         #        print(author)
 
-    
+    def fuzzy_string_match(self,target, poss_match_list):
+        '''
+        Arg: target to match 
+        Out: list of possible matches
+
+        Finds the the highest match to target from a list of possible candidates
+        '''
+        poss_match_list = list(poss_match_list)
+        best_match = (0,poss_match_list[0])
+
+        for index, article in enumerate(poss_match_list):
+            ratio = fuzz.ratio(target, article)
+            if ratio > best_match[0]:
+                best_match = (index, ratio)
+        
+        return poss_match_list[best_match[0]]
+
        
+
 
     def find_authors_refs(self):
         """ 
-        This function does not work yet
-        Takes all of the references.json, and sees how many can be found in auther_db
+        Arg: None
+        Output: Key metrics on performance and which articles worked and which didnt even have info
+
+        runes through all references.json, where it goes through each cite
+        and attempts to find the arxiv id of the cite.
         """
         N_total, N_hits = 0, 0
         None_articles = []
         N_none = 0
+        it_worked = []
+
         for dir in os.listdir(self.file_dir):
             path = Path(os.path.join(self.file_dir,dir, 'references.json'))
             ref_json = read_json_DB(path)
@@ -94,12 +140,21 @@ class proccessing_3:
                 if not author:
                     N_none+=1
                     None_articles.append(dir)
-
                 if author_regex in self.author_db:
+                    if ref_json[0][key]['title']:
+                        title = ref_json[0][key]['title']
+                        ref_json[0][key]['ArXiV-ID'] = self.fuzzy_string_match(title,self.author_db[author_regex])
+                        it_worked.append(ref_json[0][key]['ArXiV-ID'], info)
+
+                    elif ref_json[0][key]['info']:
+                        info = self.infobbl_to_article_name(ref_json[0][key]['info'])
+                        ref_json[0][key]['ArXiV-ID'] = self.fuzzy_string_match(info,self.author_db[author_regex])
+                        it_worked.append((ref_json[0][key]['ArXiV-ID'], info, ref_json[0][key]['info']))
                     N_hits += 1
                 else:
                     print(author_regex, author)
-        return N_total, N_hits, N_none, set(None_articles)
+        return N_total, N_hits, N_none, set(None_articles), it_worked
+
 
 
 
@@ -191,5 +246,5 @@ if __name__ == "__main__":
     kaggle_db_path = Path('Randomized_Kaggle_Dataset_Subset_Physics.json')
     processing = proccessing_3(kaggle_db_path, Path('Step_2'))
     authors = processing.subdivide_by_author()
-    N_total, N_hits, N_none, None_articles = processing.find_authors_refs()
+    N_total, N_hits, N_none, None_articles, it_worked = processing.find_authors_refs()
 
