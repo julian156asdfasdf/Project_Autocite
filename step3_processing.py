@@ -54,8 +54,7 @@ class proccessing_3:
             return info
         info_list = []
         for poss_title in info.split(';'):
-            for split_title in poss_title.split(','):
-                info_list.append(split_title)
+            info_list.append(poss_title)
         
         target = max(info_list, key = len)
 
@@ -140,11 +139,13 @@ class proccessing_3:
                 if not author:
                     N_none+=1
                     None_articles.append(dir)
+
                 if author_regex in self.author_db:
                     if ref_json[0][key]['title']:
                         title = ref_json[0][key]['title']
                         ref_json[0][key]['ArXiV-ID'] = self.fuzzy_string_match(title,self.author_db[author_regex])
                         it_worked.append(ref_json[0][key]['ArXiV-ID'], info)
+
 
                     elif ref_json[0][key]['info']:
                         info = self.infobbl_to_article_name(ref_json[0][key]['info'])
@@ -248,3 +249,6 @@ if __name__ == "__main__":
     authors = processing.subdivide_by_author()
     N_total, N_hits, N_none, None_articles, it_worked = processing.find_authors_refs()
 
+    print(N_total, N_hits, N_none)
+    print(f'None_articles:{None_articles}')
+    print(f'It_worked: {it_worked}')
