@@ -74,7 +74,7 @@ def read_json_DB(filepath = "Randomized_Kaggle_Dataset_Subset_Physics.json"):
     return KaggleDB
 
 if __name__ == '__main__':
-    categories = ['physics', 'math']
-    #randomizeKaggleDB(categories=categories)
+    categories = ['physics']
+    randomizeKaggleDB(categories=categories)
     KaggleDB = read_json_DB(filepath="Randomized_Kaggle_Dataset" + "_Subset_" + "_".join(categories) + ".json")
     pass

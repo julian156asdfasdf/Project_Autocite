@@ -7,9 +7,9 @@ from RandomizeKaggleDB import read_json_DB
 import json
 import pickle
 from pylatexenc.latex2text import LatexNodes2Text
-from fuzzywuzzy import fuzz
 from main import KAGGLEDB, ARXIV_IDS
 from thefuzz import fuzz
+from tqdm.auto import tqdm
 
 ACCENT_CONVERTER = LatexNodes2Text()
 
@@ -22,9 +22,10 @@ ACCENT_CONVERTER = LatexNodes2Text()
 
 
 class step3_processing:
-    def __init__(self, file_dir):
-        self.file_dir = file_dir
+    def __init__(self, directory, target_name):
+        self.file_dir = directory
         self.author_db = defaultdict(set)
+        self.target = target_name
 
     def regex_on_author(self, author):
         '''
@@ -61,9 +62,9 @@ class step3_processing:
 
         return target
     
-    def subdivide_by_author(self):
+    def create_author_dict(self):
         # method 1, each key is name of author
-        for arxiv_id, value in KAGGLEDB.items():
+        for arxiv_id, value in tqdm(KAGGLEDB.items(), desc='Building author dictionary'):
             authors = value['authors']
             authors_list = authors.split(',')
             for author in authors_list:
@@ -115,7 +116,7 @@ class step3_processing:
        
 
 
-    def find_authors_refs(self):
+    def ref_matcher(self):
         """ 
         Arg: None
         Output: Key metrics on performance and which articles worked and which didnt even have info
@@ -128,8 +129,8 @@ class step3_processing:
         N_none = 0
         # it_worked = []
 
-        for dir in os.listdir(self.file_dir):
-            path = Path(os.path.join(self.file_dir,dir, 'references.json'))
+        for dir in tqdm(os.listdir(self.file_dir), desc='Matching references'):
+            path = os.path.join(self.file_dir,dir, 'references.json')
             ref_json = read_json_DB(path)
             for latex_id, ref in ref_json.items():
                 author = ref['author_ln']
@@ -156,14 +157,16 @@ class step3_processing:
                     N_hits += 1
                 else:
                     # Author not found in self.author_db
-                    print(author_regex, author)
+                    # print(author_regex, author)
+                    pass
             
             new_ref_json = {}
             for key, value in ref_json.items():
-                new_ref_json[key] = value['ArXiV-ID']
+                new_ref_json[key] = value
             with open(path, 'w') as f:
                 json.dump(new_ref_json, f)
-        return N_total, N_hits, N_none, set(None_articles)#, it_worked
+        # return N_total, N_hits, N_none, set(None_articles)#, it_worked
+        return None
 
 
 
@@ -184,9 +187,11 @@ class step3_processing:
         latex_commands = ['\\begin{', '\\cite{', '\\citet{', '\\citep{', '\\footcite{', '\\end{', 
                         '\\figure{', '\\includegraphics{', '\\includegraphics[', '\\label{', '\\ref{', '\\section{', 
                         '\\subsection{', '\\subsubsection{', '\\textcolor{', '\\textsubscript{', 
-                        '\\textsuperscript']
-
-        with open(main_txt, 'r') as f:
+                        '\\textsuperscript', r'\usepackage[.*?]{', '\\usepackage{', '\\documentclass{', r'\frac{.*?}{',
+                        '\\overline{']
+        # '$.*?$', '$$.*?$$'
+        
+        with open(main_txt, 'r', encoding='ISO-8859-1') as f:
             text = f.read()
 
         with open(ref_json, 'r') as f:
@@ -195,14 +200,15 @@ class step3_processing:
         # with open(dataset_pkl, 'rb') as f:
         #     dataset = pickle.load(f)
 
-        # Find the LaTeXID in the text and extract the context
+        # Find all occurrences of the LaTeXID in the text and extract the context
         for LaTeXID, ref in ref_dict.items():
             arXivID = ref['ArXiV-ID']
-            if LaTeXID in text:
-                if text.index(LaTeXID) > 2000: # Limit the context to 2000 characters before the LaTeXID
-                    context = text[text.index(LaTeXID)-2000:text.index(LaTeXID)]
+            indices = [m.start() for m in re.finditer(re.escape(LaTeXID), text)]
+            for index in indices:
+                if index > 2000: # Limit the context to 2000 characters before the LaTeXID
+                    context = text[index-2000:index]
                 else:
-                    context = text[:text.index(LaTeXID)]
+                    context = text[:index]
 
                 context = context.split() # Tokenization
                 new_context = []
@@ -221,22 +227,25 @@ class step3_processing:
 
                 # Clean the context
                 new_context = [token for token in new_context if not any(command in token for command in latex_commands)]
-                new_context = [ACCENT_CONVERTER.latex_to_text(token) for token in new_context]
+                try:
+                    new_context = [ACCENT_CONVERTER.latex_to_text(token) for token in new_context]
+                except:
+                    continue
                 new_context = [token.strip() for token in new_context]
                 new_context = [token for token in new_context if token]
                 new_context = ' '.join(new_context)
 
                 # Limit the context size
                 if len(new_context) > context_size:
-                    new_context = new_context[:context_size]
+                    new_context = new_context[-context_size:]
 
                 # Append the context to the dataset
-                self.dataset.append([main_txt[:-4], arXivID, new_context])
+                self.dataset.append([main_txt[:-4].split('/')[-1], arXivID, new_context])
 
         return None
 
 
-    def build_dataset(self, dataset_pkl='dataset.pkl', update=True):
+    def build_dataset(self, update=True):
         """
         Builds the dataset.pkl file containing the context of each citation in the main.txt files.
 
@@ -249,7 +258,7 @@ class step3_processing:
 
         if update:
             try:
-                with open(dataset_pkl, 'rb') as f:
+                with open(self.target, 'rb') as f:
                     self.dataset = pickle.load(f)
             except:
                 update = False
@@ -257,28 +266,28 @@ class step3_processing:
         else:
             self.dataset = []
 
-        for dir in os.listdir(self.file_dir):
-            main_txt = Path(os.path.join(self.file_dir,dir, 'main.txt'))
-            ref_json = Path(os.path.join(self.file_dir,dir, 'references.json'))
+        for dir in tqdm(os.listdir(self.file_dir), desc='Building dataset'):
+            main_txt = os.path.join(self.file_dir,dir, dir +'.txt')
+            ref_json = os.path.join(self.file_dir,dir, 'references.json')
             self.map_context(main_txt, ref_json, context_size=300)
 
         if update:
             pd_dataset = pd.DataFrame(self.dataset, columns=['main_arxiv_id', 'target_arxiv_id', 'context'])
             pd_dataset.drop_duplicates(inplace=True)
-            pd_dataset.to_pickle(dataset_pkl)
+            pd_dataset.to_pickle(self.target)
         else:
-            with open(dataset_pkl, 'wb') as f:
+            with open(self.target, 'wb') as f:
                 pickle.dump(self.dataset, f)
     
         return None
 
 
 if __name__ == "__main__":
-    kaggle_db_path = Path('Randomized_Kaggle_Dataset_Subset_Physics.json')
-    processing = step3_processing(Path('Step_2'))
-    authors = processing.subdivide_by_author()
-    N_total, N_hits, N_none, None_articles, it_worked = processing.find_authors_refs()
+    processing = step3_processing('Step_2', 'dataset.pkl')
+    authors = processing.create_author_dict()
+    processing.ref_matcher()
+    processing.build_dataset(update=False)
 
-    print(N_total, N_hits, N_none)
-    print(f'None_articles:{None_articles}')
-    print(f'It_worked: {it_worked}')
+    # print(N_total, N_hits, N_none)
+    # print(f'None_articles:{None_articles}')
+    # print(f'It_worked: {it_worked}')
