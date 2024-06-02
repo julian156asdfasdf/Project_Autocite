@@ -64,7 +64,7 @@ class step0_processing:
         file_path = Path("./"+self.target) / f"{paper_id_edit}.tar"
         # Try to download paper
         try: 
-            response = requests.get(link, timeout=120)
+            response = requests.get(link, timeout=40)
         except TimeoutError:
             print(f"Timeout on {paper_id}")
 
