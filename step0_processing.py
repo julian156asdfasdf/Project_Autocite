@@ -1,11 +1,13 @@
 import os
 from pathlib import Path
 import requests
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import os
 import pandas as pd
 import numpy as np
 import shutil
 from main import KAGGLEDB, ARXIV_IDS
+
 
 
 class step0_processing:
@@ -41,26 +43,61 @@ class step0_processing:
         self.links = links
         self.arxiv_papers = arxiv_papers
 
-    def get_docs(self):
-        """
-        Uses the list of links from get_tar_links to download the papers as .tar files into the Step_0 directory.
-        """
-        for idx, link in enumerate(self.links, start=1):  # Just an example with `.tail()`, remove it to download all
-            paper_id = self.arxiv_papers['arxiv_id'][idx - 1]  # Adjust index if necessary
-            paper_id_edit = paper_id.replace("/", "_slash")
-            file_path = Path("./"+self.target) / f"{paper_id_edit}.tar"
-            print(f"Downloading {paper_id} to {file_path}... " + str(idx) + "/" + str(self.window_size) + " in round: " + str(self.round_number))
 
-            # Download a paper from the given URL and save it to the given path.
-            response = requests.get(link)
-            if response.status_code == 200:
-                try:
-                    with open(file_path, 'wb') as f:
-                        f.write(response.content)
-                except Exception as e:
-                    print(f"Failed to download {link} with error: {e}")
-            else:
-                print(f"Failed to download {link}")
+    def download_paper(self, link, paper_id, target, idx):
+        paper_id_edit = paper_id.replace("/", "_slash")
+        file_path = Path("./" + target) / f"{paper_id_edit}.tar"
+        print(f"Downloading {paper_id} to {file_path}")
+
+        paper_id_edit = paper_id.replace("/", "_slash")
+        file_path = Path("./"+self.target) / f"{paper_id_edit}.tar"
+
+        # Try to download paper
+        response = requests.get(link)
+        if response.status_code == 200:
+            try:
+                with open(file_path, 'wb') as f:
+                    f.write(response.content)
+            except Exception as e:
+                print(f"Failed to download {link} with error: {e}")
+        else:
+            print(f"Failed to download {link}")
+        return idx
+
+    def download_tar_files(self):
+        files_left = self.window_size
+        with ThreadPoolExecutor() as executor:
+            futures = []
+            for idx, link in enumerate(self.links, start=1):
+                paper_id = self.arxiv_papers['arxiv_id'][idx - 1]  # Adjust index if necessary
+                futures.append(executor.submit(self.download_paper, link, paper_id, self.target, idx))
+                
+
+            for future in as_completed(futures):
+                result = future.result()
+                files_left -= 1
+                print(f'{self.window_size-files_left}/{self.window_size}')
+
+    # def get_docs(self):
+    #     """
+    #     Uses the list of links from get_tar_links to download the papers as .tar files into the Step_0 directory.
+    #     """
+    #     for idx, link in enumerate(self.links, start=1):  # Just an example with `.tail()`, remove it to download all
+    #         paper_id = self.arxiv_papers['arxiv_id'][idx - 1]  # Adjust index if necessary
+    #         paper_id_edit = paper_id.replace("/", "_slash")
+    #         file_path = Path("./"+self.target) / f"{paper_id_edit}.tar"
+    #         print(f"Downloading {paper_id} to {file_path}... " + str(idx) + "/" + str(self.window_size) + " in round: " + str(self.round_number))
+
+    #         # Download a paper from the given URL and save it to the given path.
+    #         response = requests.get(link)
+    #         if response.status_code == 200:
+    #             try:
+    #                 with open(file_path, 'wb') as f:
+    #                     f.write(response.content)
+    #             except Exception as e:
+    #                 print(f"Failed to download {link} with error: {e}")
+    #         else:
+    #             print(f"Failed to download {link}")
 
 
 if __name__ == "__main__":    
