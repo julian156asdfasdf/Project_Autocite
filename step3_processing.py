@@ -162,7 +162,7 @@ class step3_processing:
 #Arg: target to match 
         # Out: list of possible matches
 
-    def fuzzy_string_match(self, target: str, poss_match_list: list) -> str:
+    def fuzzy_string_match(self, target: str, poss_match_list: set):
         '''
         Finds the the highest match to target from a list of possible candidates
         
@@ -173,17 +173,17 @@ class step3_processing:
         Returns:
             string: the best match
         '''
-
         poss_match_list = list(poss_match_list)
         best_match = (0,poss_match_list[0])
 
         # Find the best match
         for index, article in enumerate(poss_match_list):
-            ratio = fuzz.ratio(target, article)
+            info = KAGGLEDB[article]['info']
+            ratio = fuzz.ratio(target, info)
             if ratio > best_match[0]:
-                best_match = (index, ratio)
+                best_match = (ratio, index)
         
-        return poss_match_list[best_match[0]] if best_match[1] > 77 else None
+        return poss_match_list[best_match[1]] if best_match[0] > 77 else None
 
     def ref_matcher(self) -> None:
         """ 

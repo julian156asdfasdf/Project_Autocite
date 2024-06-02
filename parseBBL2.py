@@ -1,9 +1,10 @@
 import re
 
-def remove_latex_commands(text):
+def remove_latex_commands(text: str) -> None:
     """
     Removes all latex commands from a string.
     """
+
     text = text.replace("et~al.", " ").replace("\n", ' ')
 
     # Assigns the intervals of the equations in the text (Commands are not to be removed from them)
@@ -122,15 +123,15 @@ def parsebbl(file_path = None, bbl_str = None):
             with open(file_path, 'r', encoding='ISO-8859-1') as file:
                 bbl_str = file.read()
         except Exception as e:
-            print(f"Error reading file {file_path} in parsebbl: {e}")
+            # print(f"Error reading file {file_path} in parsebbl: {e}")
             return {}
     elif not bbl_str:
-        print("No input given to the parsebbl function. Exiting.")
+        # print("No input given to the parsebbl function. Exiting.")
         return {}
     
     # Check if the file contains a bibliography
     if "\\begin{thebibliography}" not in bbl_str:
-        print("No bibliography found in the bbl file. Exiting.")
+        # print("No bibliography found in the bbl file. Exiting.")
         return {}
 
     # Remove comments in the bbl file

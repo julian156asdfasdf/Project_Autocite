@@ -48,7 +48,7 @@ class step1_processing:
         """
         Deletes the current Step_1 folder and creates a new empty one.
         """
-        
+
         shutil.rmtree(self.target, ignore_errors=True)
         os.makedirs(self.target, exist_ok=False)
 
@@ -74,7 +74,7 @@ class step1_processing:
                     #os.remove(os.path.join(self.data, file_name))
                     # print(f"{file_name} extracted successfully to {tar_dir_path}.")
                 except tarfile.ReadError as e:
-                    print(f"Error extracting {file_name}: {e}")
+                    #  print(f"Error extracting {file_name}: {e}")
                     unable_folder.add(file_name)
         with open("output_tar_unable_folders.txt", 'w') as f:
             f.write(str(unable_folder))

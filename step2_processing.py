@@ -339,7 +339,6 @@ class step2_processing:
             destination_dir = os.path.join(step_2_folder, dir)
             with open(os.path.join(destination_dir, "references.json"), 'w') as f:
                 json.dump(parsed, f)
-        print("Created references.json file and removed all .bib and .bbl files.")
 
 
 if __name__ == "__main__":

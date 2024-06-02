@@ -1,6 +1,11 @@
 import bibtexparser
 import re
+from bibtexparser.bparser import BibTexParser
 from parseBBL2 import remove_latex_commands
+
+parser = BibTexParser(common_strings=False)
+parser.ignore_nonstandard_types = False
+parser.expect_multiple_parse = True
 
 def parseBib(bibtex_str=None, bibtex_filepath=None):
     """
@@ -8,14 +13,14 @@ def parseBib(bibtex_str=None, bibtex_filepath=None):
     """
     try:
         if bibtex_str:
-            bib = bibtexparser.loads(bibtex_str)
+            bib = bibtexparser.loads(bibtex_str, parser)
         elif bibtex_filepath:
-            bib = bibtexparser.load(open(bibtex_filepath, encoding='utf-8'))
+            bib = bibtexparser.load(open(bibtex_filepath, encoding='utf-8'), parser)
         else:
-            print("No input given to the parseBib function. Exiting.")
+            # print("No input given to the parseBib function. Exiting.")
             return {}
     except:
-        print("Error parsing bibtex file. Exiting.")
+        # print("Error parsing bibtex file. Exiting.")
         return {}
     bib_dict = {}
     for entry in bib.entries:
