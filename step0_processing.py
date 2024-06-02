@@ -44,14 +44,9 @@ class step0_processing:
         self.arxiv_papers = arxiv_papers
 
 
-    def download_paper(self, link, paper_id, target, idx):
-        paper_id_edit = paper_id.replace("/", "_slash")
-        file_path = Path("./" + target) / f"{paper_id_edit}.tar"
-        print(f"Downloading {paper_id} to {file_path}")
-
+    def download_paper(self, link, paper_id, target):
         paper_id_edit = paper_id.replace("/", "_slash")
         file_path = Path("./"+self.target) / f"{paper_id_edit}.tar"
-
         # Try to download paper
         response = requests.get(link)
         if response.status_code == 200:
@@ -62,7 +57,7 @@ class step0_processing:
                 print(f"Failed to download {link} with error: {e}")
         else:
             print(f"Failed to download {link}")
-        return idx
+        return paper_id
 
     def download_tar_files(self):
         files_left = self.window_size
@@ -70,13 +65,12 @@ class step0_processing:
             futures = []
             for idx, link in enumerate(self.links, start=1):
                 paper_id = self.arxiv_papers['arxiv_id'][idx - 1]  # Adjust index if necessary
-                futures.append(executor.submit(self.download_paper, link, paper_id, self.target, idx))
-                
+                futures.append(executor.submit(self.download_paper, link, paper_id, self.target))
 
             for future in as_completed(futures):
                 result = future.result()
                 files_left -= 1
-                print(f'{self.window_size-files_left}/{self.window_size}')
+                print(f'Progress: {self.window_size-files_left}/{self.window_size}. File: {result}')
 
     # def get_docs(self):
     #     """
