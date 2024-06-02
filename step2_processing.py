@@ -230,7 +230,7 @@ class step2_processing:
                 # Isolate the citations in the main file
                 doc_contents = self.isolate_cites(doc_contents)
                 # Write the main file to the step_2 folder
-                file_write = open(new_main_file, 'w', encoding=self.encoder)
+                file_write = open(new_main_file, 'w', encoding=self.encoder, errors='replace')
                 file_write.write(doc_contents)
                 file_write.close()
                 pass

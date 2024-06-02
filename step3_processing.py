@@ -14,6 +14,52 @@ from tqdm.auto import tqdm
 
 ACCENT_CONVERTER_bad = LatexNodes2Text()
 
+
+def ACCENT_CONVERTER(text):
+    """
+    Cleans the text from all latex equations and figures.
+    """
+
+    # Remove all begin-equations and begin-figures
+    keywords_to_remove = ["figure", "equation", "equation\*", "align", "align\*", "gather", "gather\*"]
+    for keyword in keywords_to_remove:
+        string_pattern = r'\\begin\{'+keyword+r'\}.*?\\end\{'+keyword+r'\}'
+        text = re.sub(string_pattern, '', text, flags=re.DOTALL)
+
+    # Remove all inline equations
+    equation_indexes = []
+    last_dollar_idx = -1
+    while "$" in text[last_dollar_idx+1:]:
+        idx_dollar = text.find("$", last_dollar_idx+1)
+        # If the dollar sign is the last character in the text, then break
+        if idx_dollar == len(text)-1:
+            break
+        # If the dollar sign is a command (Meaning not an equation)
+        if text[idx_dollar-1] == "\\":
+            last_dollar_idx = idx_dollar
+        # If there are two dollar signs in a row, then it is an row-equation
+        elif text[idx_dollar+1] == "$":
+            last_dollar_idx = text.find("$$", idx_dollar+2)+1
+            last_dollar_idx = (last_dollar_idx if last_dollar_idx != 0 else len(text))
+            equation_indexes.append([idx_dollar, last_dollar_idx])
+        else: # If there is only one dollar sign, then it is an inline-equation
+            last_dollar_idx = text.find("$", idx_dollar+1)
+            last_dollar_idx = (last_dollar_idx if last_dollar_idx != -1 else len(text))
+            equation_indexes.append([idx_dollar, last_dollar_idx])
+    for interval in reversed(equation_indexes):
+        text = text[:interval[0]] + " " + text[interval[1]+1:]
+
+    # Cleans using pylatexenc.latex2text package
+    try:
+        text = ACCENT_CONVERTER_bad.latex_to_text(text)
+    except Exception as e:
+        return ""
+    text = re.sub(r'\s+', ' ', text)
+    text = re.sub(r'\n+', '\n', text)
+    text = text.strip()
+
+    return text
+
 # Match step 2 references.tex titles with kaggle db,
 # Extract ArxivID and abstract
 # Create JSON {latexID: [ArxivID, ]}
@@ -237,34 +283,8 @@ class step3_processing:
                 else:
                     context = text[:index]
 
-                context = context.split() # Tokenization
-                new_context = []
-
-                # Connect the tokens that are part of the same command
-                for i, token in enumerate(context):
-                    if '{' in token:
-                        j = i
-                        while j < len(context) and '}' not in context[j]:
-                            j += 1
-                        new_context.append(' '.join(context[i:j+1]))
-                    elif any('{' in token for token in new_context) and any('}' in token for token in context[i:]):
-                        continue
-                    else:
-                        new_context.append(token)
-
-                # Clean the context
-                new_context = [token for token in new_context if not any(command in token for command in latex_commands)]
-                try:
-                    new_context = [ACCENT_CONVERTER.latex_to_text(token) for token in new_context]
-                except:
-                    continue
-                new_context = [token.strip() for token in new_context]
-                new_context = [token for token in new_context if token]
-                new_context = ' '.join(new_context)
-
-                # Limit the context size
-                if len(new_context) > context_size:
-                    new_context = new_context[-context_size:]
+                # Remove all LaTeX commands from the context
+                new_context = ACCENT_CONVERTER(context)[-context_size:]
 
                 # Append the context to the dataset
                 self.dataset.append([main_txt[:-4].split('/')[-1], arXivID, new_context])
