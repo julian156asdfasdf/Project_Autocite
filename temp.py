@@ -5,6 +5,9 @@ from collections import defaultdict
 import re
 from RandomizeKaggleDB import read_json_DB
 from thefuzz import fuzz
+from pylatexenc.latex2text import LatexNodes2Text
+
+ACCENT_CONVERTER_bad = LatexNodes2Text()
 
 # Match step 2 references.tex titles with kaggle db,
 # Extract ArxivID and abstract
@@ -12,6 +15,21 @@ from thefuzz import fuzz
 # download following https://www.kaggle.com/datasets/Cornell-University/arxiv?resource=download
 # and call json arxiv_metadata
 
+
+def ACCENT_CONVERTER(text):
+    keywords_to_remove = []
+    # Remove \frac{}{} expressions
+    # frac_pattern = r'\\frac\{.*?\}\{.*?\}'
+    # text = re.sub(frac_pattern, '', text)
+    
+    # Remove LaTeX figure environments
+    # figure_pattern = r'\\begin\{figure\}.*?\\end\{figure\}'
+    # text = re.sub(figure_pattern, '', text, flags=re.DOTALL)
+    
+
+    text = ACCENT_CONVERTER_bad(text)
+
+    return text
 
 
 class proccessing_3:
@@ -134,6 +152,27 @@ class proccessing_3:
         return N_total, N_hits, N_none, set(None_articles), it_worked
 
 
+
+    # def get_docs(self):
+    #     """
+    #     Uses the list of links from get_tar_links to download the papers as .tar files into the Step_0 directory.
+    #     """
+    #     for idx, link in enumerate(self.links, start=1):  # Just an example with `.tail()`, remove it to download all
+    #         paper_id = self.arxiv_papers['arxiv_id'][idx - 1]  # Adjust index if necessary
+    #         paper_id_edit = paper_id.replace("/", "_slash")
+    #         file_path = Path("./"+self.target) / f"{paper_id_edit}.tar"
+    #         print(f"Downloading {paper_id} to {file_path}... " + str(idx) + "/" + str(self.window_size) + " in round: " + str(self.round_number))
+
+    #         # Download a paper from the given URL and save it to the given path.
+    #         response = requests.get(link)
+    #         if response.status_code == 200:
+    #             try:
+    #                 with open(file_path, 'wb') as f:
+    #                     f.write(response.content)
+    #             except Exception as e:
+    #                 print(f"Failed to download {link} with error: {e}")
+    #         else:
+    #             print(f"Failed to download {link}")
 
 
 if __name__ == "__main__":

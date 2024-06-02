@@ -20,33 +20,23 @@ ACCENT_CONVERTER_bad = LatexNodes2Text()
 # download following https://www.kaggle.com/datasets/Cornell-University/arxiv?resource=download
 # and call json arxiv_metadata
 
-def ACCENT_CONVERTER(text):
-    # Remove \frac{}{} expressions
-    frac_pattern = r'\\frac\{.*?\}\{.*?\}'
-    text = re.sub(frac_pattern, '', text)
-    
-    # Remove LaTeX figure environments
-    figure_pattern = r'\\begin\{figure\}.*?\\end\{figure\}'
-    text = re.sub(figure_pattern, '', text, flags=re.DOTALL)
-    
-
-    text = ACCENT_CONVERTER_bad(text)
-
-    return text
-
 class step3_processing:
     def __init__(self, directory, target_name):
         self.file_dir = directory
         self.author_db = defaultdict(set)
         self.target = target_name
 
-    def regex_on_author(self, author):
-        '''
-        Arg: Author string
-        Output: subset of string, best guess on author id
+    def regex_on_author(self, author: str) -> str:
+        """
+        Finds the last word in the author string, which is the last name of the author.
 
-        uses regex and splitting of string to attempt to find the correct author in a disorganized list
-        '''
+        Arguments:
+            author (str): The author string.
+
+        Returns:
+            str: The last name of the author.
+        """
+
         if not author:
             return author
         if len(author)>6:
@@ -58,13 +48,17 @@ class step3_processing:
                 author = match.group().lower()
         return author
     
-    def infobbl_to_article_name(self, info):
+    def infobbl_to_article_name(self, info: str) -> str:
         '''
-        Arg: info element of bbl file
-        Output:
-        Likewise the regex on author, attempts to find the article name, 
-        based on a disorganized info element of bbl file
+        Finds the most likely title of the article from the info element of the bbl file
+
+        Arguments:
+            info: string of info from bbl file
+
+        Returns:
+            string: the most likely title of the article
         '''
+
         if not info:
             return info
         info_list = []
@@ -75,7 +69,17 @@ class step3_processing:
 
         return target
     
-    def create_author_dict(self):
+    def create_author_dict(self) -> dict:
+        """
+        Creates a dictionary with authors as keys and their corresponding ArXiV IDs as values.
+
+        Arguments:
+            None
+
+        Returns:
+            dict: A dictionary with authors as keys and their corresponding ArXiV IDs as values.
+        """
+
         # method 1, each key is name of author
         for arxiv_id, value in tqdm(KAGGLEDB.items(), desc='Building author dictionary'):
             authors = value['authors']
@@ -109,16 +113,25 @@ class step3_processing:
         #    for author in ref_json['author_ln']:
         #        print(author)
 
-    def fuzzy_string_match(self,target, poss_match_list):
-        '''
-        Arg: target to match 
-        Out: list of possible matches
+#Arg: target to match 
+        # Out: list of possible matches
 
-        Finds the the highest match to target from a list of possible candidates
+    def fuzzy_string_match(self, target: str, poss_match_list: list) -> str:
         '''
+        Finds the the highest match to target from a list of possible candidates
+        
+        Arguments:
+            target: string to match
+            poss_match_list: list of possible matches
+
+        Returns:
+            string: the best match
+        '''
+
         poss_match_list = list(poss_match_list)
         best_match = (0,poss_match_list[0])
 
+        # Find the best match
         for index, article in enumerate(poss_match_list):
             ratio = fuzz.ratio(target, article)
             if ratio > best_match[0]:
@@ -126,17 +139,20 @@ class step3_processing:
         
         return poss_match_list[best_match[0]]
 
-       
-
-
-    def ref_matcher(self):
+    def ref_matcher(self) -> None:
         """ 
-        Arg: None
-        Output: Key metrics on performance and which articles worked and which didnt even have info
+        Runs through all references.json, where it goes through each cite and attempts to find the arxiv id of the cite.
 
-        runes through all references.json, where it goes through each cite
-        and attempts to find the arxiv id of the cite.
+        Arguments: 
+            None
+
+        Returns:
+            None
+        
+        
+        # Output: Key metrics on performance and which articles worked and which didnt even have info
         """
+
         N_total, N_hits = 0, 0
         None_articles = []
         N_none = 0
@@ -181,20 +197,18 @@ class step3_processing:
         # return N_total, N_hits, N_none, set(None_articles)#, it_worked
         return None
 
-
-
-    def map_context(self, main_txt, ref_json, context_size=300):
+    def map_context(self, main_txt: str, ref_json: str, context_size: int=300) -> None:
         """
         Maps the context of a citation in a .txt file to the corresponding arXivID and adds it to a dataset.pkl file along with the main_txt and arXivID.
 
         Arguments:
-        main_txt: The .txt file containing the citations and main text.
-        ref_json: The .json file containing the mapping between LaTeXID and arXivID.
-        dataset_pkl: The .pkl file containing the dataset.
-        context_size: The maximum size of the context.
+            main_txt: The .txt file containing the citations and main text.
+            ref_json: The .json file containing the mapping between LaTeXID and arXivID.
+            dataset_pkl: The .pkl file containing the dataset.
+            context_size: The maximum size of the context.
 
         Returns:
-        None
+            None
         """
 
         latex_commands = ['\\begin{', '\\cite{', '\\citet{', '\\citep{', '\\footcite{', '\\end{', 
@@ -258,15 +272,15 @@ class step3_processing:
         return None
 
 
-    def build_dataset(self, update=True):
+    def build_dataset(self, update: bool=True) -> None:
         """
         Builds the dataset.pkl file containing the context of each citation in the main.txt files.
 
         Arguments:
-        None
+            None
 
         Returns:
-        None
+            None
         """
 
         if update:

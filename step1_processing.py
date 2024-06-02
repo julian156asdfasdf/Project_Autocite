@@ -6,15 +6,15 @@ import os
 import tabulate
 import shutil
 
-def delete_empty_folders(root):
+def delete_empty_folders(root: str) -> set:
     """
     A helper function for the rmv_irrelevant_files-function to delete empty folders in the directory tree after removing irrelevant files.
 
     Arguments:
-    root: The root directory of the directory tree to be checked for empty folders. (The Processed folder)
+        root: The root directory of the directory tree to be checked for empty folders. (The Processed folder)
 
     Returns:
-    A set of the deleted folders.
+        A set of the deleted folders.
     """
 
     deleted = set()
@@ -43,14 +43,14 @@ class step1_processing:
         self.data = Path("./"+directory)
         self.target = target_name
 
-    def create_target_folder(self):
+    def create_target_folder(self) -> None:
         """
         Deletes the current Step_1 folder and creates a new empty one.
         """
         shutil.rmtree(self.target, ignore_errors=True)
         os.makedirs(self.target, exist_ok=False)
 
-    def tar_extractor(self):
+    def tar_extractor(self) -> set:
         """
         Takes a Papers directory and extracts the contents of the .tar files into a new directory called tex_files. In the tex_files directory
         there will a subfolder for each paper containing the contents of the corresponding .tar file.
@@ -77,19 +77,20 @@ class step1_processing:
             f.write(str(unable_folder))
         return unable_folder    
 
-    def rmv_irrelevant_files(self, manifest_title):
+    def rmv_irrelevant_files(self, manifest_title: str) -> dict:
         """
         Removes irrelevant files from the directory tree (The Processed Folder). The function removes all files that are not .tex, .bib or .bbl files.
 
         Arguments:
-        directory: The root directory of the directory tree to be checked for irrelevant files. (The Processed folder)
+            manifest_title: The title of the manifest file that will be created.
 
         Returns: 
-        A dictionary with the deleted files and their corresponding paper ID.
+            A dictionary with the deleted files and their corresponding paper ID.
         """
 
         del_dict = defaultdict(lambda:set())
 
+        # Walk through the directory tree and remove all files that are not .tex, .bib or .bbl files
         for root, dirs, files in os.walk(self.target):
             for file in files:
                 if not file.lower().endswith(".tex") and not file.lower().endswith(".bib") and not file.lower().endswith(".bbl"):
