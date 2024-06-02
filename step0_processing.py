@@ -7,6 +7,7 @@ import pandas as pd
 import numpy as np
 import shutil
 from main import KAGGLEDB, ARXIV_IDS
+from tqdm.auto import tqdm
 
 class step0_processing:
     def __init__(self, target_name="Step_0",start_idx=0, window_size=100, end_idx=100):
@@ -91,18 +92,18 @@ class step0_processing:
                 paper_id = self.arxiv_papers['arxiv_id'][idx - 1] # Adjust index if necessary
                 futures.append(executor.submit(self.download_paper, link, paper_id))
 
-            for future in as_completed(futures):
+            for future in tqdm(as_completed(futures), desc="Downloading papers", total=self.window_size):
                 result = future.result()
                 files_left -= 1
-                print(f'Progress: {self.window_size-files_left}/{self.window_size}. File: {result}')
+                # print(f'Progress: {self.window_size-files_left}/{self.window_size}. File: {result}')
 
 if __name__ == "__main__":    
     from RandomizeKaggleDB import read_json_DB
 
-    KAGGLEDB = read_json_DB(filepath="Randomized_Kaggle_Dataset_Subset_physics_math.json")
+    KAGGLEDB = read_json_DB(filepath="Randomized_Kaggle_Dataset_Subset_physics.json")
     ARXIV_IDS = list(KAGGLEDB.keys())
 
-    step_0 = step0_processing(target_name="Step_0", start_idx=0, window_size=10, end_idx=100)
+    step_0 = step0_processing(target_name="Step_0", start_idx=0, window_size=100, end_idx=100)
 
     # Create sliding window for step 0-2
     for i in range(step_0.rounds):

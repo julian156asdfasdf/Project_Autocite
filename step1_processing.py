@@ -5,6 +5,7 @@ import tarfile
 import os
 import tabulate
 import shutil
+from tqdm.auto import tqdm
 
 def delete_empty_folders(root: str) -> set:
     """
@@ -47,6 +48,7 @@ class step1_processing:
         """
         Deletes the current Step_1 folder and creates a new empty one.
         """
+        
         shutil.rmtree(self.target, ignore_errors=True)
         os.makedirs(self.target, exist_ok=False)
 
@@ -55,9 +57,10 @@ class step1_processing:
         Takes a Papers directory and extracts the contents of the .tar files into a new directory called tex_files. In the tex_files directory
         there will a subfolder for each paper containing the contents of the corresponding .tar file.
         """
+
         unable_folder = set()
         files = os.listdir(self.data)
-        for file_name in files:
+        for file_name in tqdm(files, desc="Extracting .tar files"):
             if file_name[-4:].lower() =='.tar':
                 try:
                     #creates a folder in the directory folder for each paper

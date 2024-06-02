@@ -50,10 +50,10 @@ def ACCENT_CONVERTER(text):
         text = text[:interval[0]] + " " + text[interval[1]+1:]
 
     # Cleans using pylatexenc.latex2text package
-    try:
-        text = ACCENT_CONVERTER_bad.latex_to_text(text)
-    except Exception as e:
-        return ""
+    # try:
+    #     text = ACCENT_CONVERTER_bad.latex_to_text(text)
+    # except Exception as e:
+    #     return ""
     text = re.sub(r'\s+', ' ', text)
     text = re.sub(r'\n+', '\n', text)
     text = text.strip()
@@ -183,7 +183,7 @@ class step3_processing:
             if ratio > best_match[0]:
                 best_match = (index, ratio)
         
-        return poss_match_list[best_match[0]]
+        return poss_match_list[best_match[0]] if best_match[1] > 77 else None
 
     def ref_matcher(self) -> None:
         """ 
@@ -194,7 +194,6 @@ class step3_processing:
 
         Returns:
             None
-        
         
         # Output: Key metrics on performance and which articles worked and which didnt even have info
         """
@@ -220,6 +219,11 @@ class step3_processing:
                     if ref['title']:
                         title = ref['title']
                         #ref['ArXiV-ID'] = self.fuzzy_string_match(title,self.author_db[author_regex])
+                        # match_id = self.fuzzy_string_match(title,self.author_db[author_regex])
+                        # if match_id != None:
+                        #     ref_json[latex_id]['ArXiV-ID'] = match_id
+                        # else:
+                        #     ref_json.pop(latex_id)
                         ref_json[latex_id]['ArXiV-ID'] = self.fuzzy_string_match(title,self.author_db[author_regex])
                         #it_worked.append(ref['ArXiV-ID'], title)
 
@@ -227,6 +231,11 @@ class step3_processing:
                     elif ref['info']:
                         title = self.infobbl_to_article_name(ref['info'])
                         #ref['ArXiV-ID'] = self.fuzzy_string_match(title,self.author_db[author_regex])
+                        # match_id = self.fuzzy_string_match(title,self.author_db[author_regex])
+                        # if match_id != None:
+                        #     ref_json[latex_id]['ArXiV-ID'] = match_id
+                        # else:
+                        #     ref_json.pop(latex_id)
                         ref_json[latex_id]['ArXiV-ID'] = self.fuzzy_string_match(title,self.author_db[author_regex])
                         #it_worked.append((ref['ArXiV-ID'], title, ref['info']))
                     N_hits += 1
@@ -234,10 +243,12 @@ class step3_processing:
                     # Author not found in self.author_db
                     # print(author_regex, author)
                     pass
-            
+
             new_ref_json = {}
             for key, value in ref_json.items():
-                new_ref_json[key] = value
+                if value['ArXiV-ID']:
+                    new_ref_json[key] = value
+            
             with open(path, 'w') as f:
                 json.dump(new_ref_json, f)
         # return N_total, N_hits, N_none, set(None_articles)#, it_worked
@@ -257,11 +268,11 @@ class step3_processing:
             None
         """
 
-        latex_commands = ['\\begin{', '\\cite{', '\\citet{', '\\citep{', '\\footcite{', '\\end{', 
-                        '\\figure{', '\\includegraphics{', '\\includegraphics[', '\\label{', '\\ref{', '\\section{', 
-                        '\\subsection{', '\\subsubsection{', '\\textcolor{', '\\textsubscript{', 
-                        '\\textsuperscript', r'\usepackage[.*?]{', '\\usepackage{', '\\documentclass{', r'\frac{.*?}{',
-                        '\\overline{']
+        # latex_commands = ['\\begin{', '\\cite{', '\\citet{', '\\citep{', '\\footcite{', '\\end{', 
+        #                 '\\figure{', '\\includegraphics{', '\\includegraphics[', '\\label{', '\\ref{', '\\section{', 
+        #                 '\\subsection{', '\\subsubsection{', '\\textcolor{', '\\textsubscript{', 
+        #                 '\\textsuperscript', r'\usepackage[.*?]{', '\\usepackage{', '\\documentclass{', r'\frac{.*?}{',
+        #                 '\\overline{']
         # '$.*?$', '$$.*?$$'
         
         with open(main_txt, 'r', encoding='ISO-8859-1') as f:
@@ -278,8 +289,8 @@ class step3_processing:
             arXivID = ref['ArXiV-ID']
             indices = [m.start() for m in re.finditer(re.escape(LaTeXID), text)]
             for index in indices:
-                if index > 2000: # Limit the context to 2000 characters before the LaTeXID
-                    context = text[index-2000:index]
+                if index > 5000: # Limit the context to 2000 characters before the LaTeXID
+                    context = text[index-5000:index]
                 else:
                     context = text[:index]
 
@@ -290,7 +301,6 @@ class step3_processing:
                 self.dataset.append([main_txt[:-4].split('/')[-1], arXivID, new_context])
 
         return None
-
 
     def build_dataset(self, update: bool=True) -> None:
         """

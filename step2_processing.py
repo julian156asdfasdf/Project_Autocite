@@ -7,6 +7,7 @@ import re
 import shutil
 from parseBib import parseBib
 from parseBBL2 import *
+from tqdm.auto import tqdm
 
 class step2_processing:
     def __init__(self, directory, target_name):
@@ -16,38 +17,46 @@ class step2_processing:
         self.manifest = defaultdict(lambda: set())
         
         
-    def create_target_folder(self):
+    def create_target_folder(self) -> None:
         """
         Copies the directory structure of the self.data directory and appends it to the self.target directory.
+
+        Arguments:
+            None
+
+        Returns:
+            None
         """
+
         for dir in os.listdir(self.data):
             new_folder = os.path.join(self.target, dir)
             os.makedirs(new_folder, exist_ok=True)
     
 
-    def merge_and_clean_tex_files(self, root):
+    def merge_and_clean_tex_files(self, root: str):
         """
         Merges all the tex files in a subdirectory into one tex string.
         Also cleans the file by removing comments.
 
         Arguments:
-        root: The root directory of the subdirectory.
+            root: The root directory of the subdirectory.
         files: The files in the subdirectory.
 
         Returns:
-        The path to the new main file and the cleaned tex string.
+            The path to the new main file and the cleaned tex string.
         """
 
-        def clean_tex_string(tex_string):
+        def clean_tex_string(tex_string: str) -> str:
             """
             Cleans the tex string by removing all comments.
 
             Arguments:
-            tex_string: The tex string to be cleaned.
+                tex_string: The tex string to be cleaned.
 
             Returns:
-            The cleaned tex string.
+                The cleaned tex string.
             """
+
             # Remove all comments
             cleaned_tex_string = re.sub(r"\\begin{comment}.*?\\end{comment}", "", tex_string, flags=re.DOTALL | re.MULTILINE)
             cleaned_tex_string = re.sub(r"%.*", "", cleaned_tex_string)
@@ -82,12 +91,12 @@ class step2_processing:
                             doc_class_n += 1
                             doc_main = content
                 except:
-                    print(f"Error reading file in merge_tex_files: {file}")
+                    # print(f"Error reading file in merge_tex_files: {file}")
                     # Delete the folder if there is an error reading a file in it
                     return None, None 
         # If there is not 1 \documentclass in the folder, print an error and continue to the next folder
         if doc_class_n != 1:
-            print(f"Warning (can be ignored): {doc_class_n} \documentclass in {root}. Must be 1.")
+            # print(f"Warning (can be ignored): {doc_class_n} \documentclass in {root}. Must be 1.")
             # Delete the folder if there is an error reading a file in it
             return None, None
 
@@ -117,21 +126,22 @@ class step2_processing:
                             doc_main = doc_main[:idx] + input_content + doc_main[end_idx+1:]
                     except Exception as e:
                         doc_main = doc_main[:idx+4] + "l" + doc_main[idx+5:]
-                        print(f"Warning (can be ignored) for inputting path in merge_tex_files: {file_path}.")
+                        # print(f"Warning (can be ignored) for inputting path in merge_tex_files: {file_path}.")
                         continue
         return new_main_file, clean_tex_string(doc_main)
 
 
-    def split_cites(self, doc_contents):
+    def split_cites(self, doc_contents: str) -> str:
         """
         If an instance of a citation contains multiple sources, split them into separate instances, e.g., \cite{a,b} -> \cite{a} \cite{b}.
 
         Arguments:
-        String doc_contents: The contents of the .tex file to be searched for citations.
+            String doc_contents: The contents of the .tex file to be searched for citations.
 
         Returns:
-        doc_contents: The contents of the .tex file with the citations split up.
+            doc_contents: The contents of the .tex file with the citations split up.
         """
+
         cites = re.findall(r"\\cite{.*?}", doc_contents)
         for cite in cites:
             if "," in cite:
@@ -163,15 +173,15 @@ class step2_processing:
         return doc_contents
 
 
-    def isolate_cites(self, doc_contents):
+    def isolate_cites(self, doc_contents: str) -> str:
         """
         Find every instance of citations (\cite{}, \footcite{}, \citep, etc.) in a .text string and inserts \n before and after the instance.
 
         Arguments:
-        String doc_contents: The contents of the .tex file to be searched for citations.
+            String doc_contents: The contents of the .tex file to be searched for citations.
 
         Returns:
-        doc_contents: The contents of the .tex file with the citations isolated.
+            doc_contents: The contents of the .tex file with the citations isolated.
         """
 
         doc_contents = re.sub(r"(\\cite{.*?})", r"\n\1\n", doc_contents)
@@ -182,17 +192,18 @@ class step2_processing:
         return doc_contents
 
 
-    def move_references(self):
+    def move_references(self) -> None:
         """
         Copies the references of .bbl and .bib files already in the self.data directory
         into the step_2 directory and renames them as ref.bbl or ref.bib depending on the format.
 
         Arguments:
-        None
+            None
 
         Returns:
-        None
+            None
         """
+
         count = 0
         base_folder = os.path.dirname(self.data)
         step_2_folder = os.path.join(base_folder, self.target)
@@ -214,14 +225,21 @@ class step2_processing:
                         i_bib += 1
                     shutil.copy(source_path, destination_path)
                     count += 1
-        print(f"Moved {count} already established references to {self.target} folder")
+        # print(f"Moved {count} already established references to {self.target} folder")
 
 
-    def create_main_txt(self):
+    def create_main_txt(self) -> None:
         """
         Creates a main.txt file for each paper in the self.data directory into the self.target directory.
+
+        Arguments:
+            None
+
+        Returns:
+            None
         """
-        for root in os.listdir(self.data):
+
+        for root in tqdm(os.listdir(self.data), desc="Creating main.txt files"):
             new_main_file, doc_contents = self.merge_and_clean_tex_files(root)
 
             if new_main_file is not None:
@@ -233,28 +251,26 @@ class step2_processing:
                 file_write = open(new_main_file, 'w', encoding=self.encoder, errors='replace')
                 file_write.write(doc_contents)
                 file_write.close()
-                pass
             else:
                 shutil.rmtree(os.path.join(self.target, root), ignore_errors=True)
-            pass
 
-    def extract_references(self, file):
+    def extract_references(self, file: str) -> str:
         """
         Helper function. Extracts the references from the given .tex file and returns it as a string
        
         Arguments:
-        The file path [str]
+            file: The file path
        
         Returns:
-        bibliography section [str], if it found any,
-        else empty string [str]
+            bibliography section: The bibliography section of the .tex file as a string
         """
+
         with open(file, 'r', encoding=self.encoder) as f:
             try:
                 text_content = f.read()
             except UnicodeDecodeError:
-                print(f"Error reading file: {file}")
-                return ""
+                #  print(f"Error reading file: {file}")
+                return "" # Return empty string if there is an error reading the file
        
         # Find the start and end indices of the bibliography section
         start_index = text_content.find(r"\begin{thebibliography}")
@@ -265,23 +281,24 @@ class step2_processing:
             # Extract the bibliography section
             bibliography_section = text_content[start_index:end_index + len(r"\end{thebibliography}")]
             return bibliography_section
-        return ""
+        return "" # Return empty string if there is no bibliography section in the file
 
 
-    def create_references_json(self):
+    def create_references_json(self) -> None:
         """
         Creates a references.json file for each paper in the self.data directory into the self.target directory.
         
         Arguments:
-        None
+            None
         
         Returns:
-        None
+            None
         """
+
         base_folder = os.path.dirname(self.data)
         step_2_folder = os.path.join(base_folder, self.target)
         # Walk through directory
-        for dir in os.listdir(self.data):
+        for dir in tqdm(os.listdir(self.data), desc="Creating references.json files"):
             parsed = {}
             if dir not in os.listdir(self.target):
                 continue
