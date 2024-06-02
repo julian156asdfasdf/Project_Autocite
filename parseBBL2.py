@@ -137,7 +137,7 @@ def parsebbl(file_path = None, bbl_str = None):
     # Remove comments in the bbl file
     bbl_str = bbl_str.split("\\begin{thebibliography}")[1].split("\\end{thebibliography}")[0]
     cleaned_str = re.sub(r"\\begin{comment}.*?\\end{comment}", "", bbl_str, flags=re.DOTALL | re.MULTILINE)
-    cleaned_str = re.sub(r"%.*", "", cleaned_str)
+    cleaned_str = re.sub(r"(?<!\\)%.*", "", cleaned_str)
 
     # Remove lines starting with "\\providecommand"
     cleaned_str = re.sub(r"\\providecommand.*\n", "", cleaned_str)

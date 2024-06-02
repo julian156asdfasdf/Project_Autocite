@@ -59,8 +59,8 @@ class step2_processing:
 
             # Remove all comments
             cleaned_tex_string = re.sub(r"\\begin{comment}.*?\\end{comment}", "", tex_string, flags=re.DOTALL | re.MULTILINE)
-            cleaned_tex_string = re.sub(r"%.*", "", cleaned_tex_string)
-            
+            cleaned_tex_string = re.sub(r"(?<!\\)%.*", "", clean_tex_string)
+
             return cleaned_tex_string
 
         # Get all files (not from subfolders as the main.tex file is assumed to be in the root folder)

@@ -113,4 +113,5 @@ if __name__ == "__main__":
         step_0.round_number += 1
         step_0.create_target_folder()
         step_0.get_tar_links(start_id=step_0.window_size*i+step_0.start_idx)
+        step_0.download_tar_files()
         print("Downloaded tar files successfully.")
