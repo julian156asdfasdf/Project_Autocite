@@ -178,12 +178,19 @@ class step3_processing:
 
         # Find the best match
         for index, article in enumerate(poss_match_list):
-            info = KAGGLEDB[article]['info']
-            ratio = fuzz.ratio(target, info)
+            if KAGGLEDB[article]['info']:
+                bm_query = KAGGLEDB[article]['info']
+            elif KAGGLEDB[article]['title']:
+                bm_query = KAGGLEDB[article]['title']
+            else:
+                continue
+            ratio = fuzz.ratio(target, bm_query)
             if ratio > best_match[0]:
                 best_match = (ratio, index)
-        
-        return poss_match_list[best_match[1]] if best_match[0] > 77 else None
+        if best_match[0] > 77:
+            return poss_match_list[best_match[1]]
+        else:
+            return None
 
     def ref_matcher(self) -> None:
         """ 
