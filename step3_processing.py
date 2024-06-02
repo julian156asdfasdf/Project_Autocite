@@ -7,11 +7,12 @@ from RandomizeKaggleDB import read_json_DB
 import json
 import pickle
 from pylatexenc.latex2text import LatexNodes2Text
+
 from main import KAGGLEDB, ARXIV_IDS
 from thefuzz import fuzz
 from tqdm.auto import tqdm
 
-ACCENT_CONVERTER = LatexNodes2Text()
+ACCENT_CONVERTER_bad = LatexNodes2Text()
 
 # Match step 2 references.tex titles with kaggle db,
 # Extract ArxivID and abstract
@@ -19,7 +20,19 @@ ACCENT_CONVERTER = LatexNodes2Text()
 # download following https://www.kaggle.com/datasets/Cornell-University/arxiv?resource=download
 # and call json arxiv_metadata
 
+def ACCENT_CONVERTER(text):
+    # Remove \frac{}{} expressions
+    frac_pattern = r'\\frac\{.*?\}\{.*?\}'
+    text = re.sub(frac_pattern, '', text)
+    
+    # Remove LaTeX figure environments
+    figure_pattern = r'\\begin\{figure\}.*?\\end\{figure\}'
+    text = re.sub(figure_pattern, '', text, flags=re.DOTALL)
+    
 
+    text = ACCENT_CONVERTER_bad(text)
+
+    return text
 
 class step3_processing:
     def __init__(self, directory, target_name):
