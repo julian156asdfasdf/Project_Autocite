@@ -48,7 +48,10 @@ class step0_processing:
         paper_id_edit = paper_id.replace("/", "_slash")
         file_path = Path("./"+self.target) / f"{paper_id_edit}.tar"
         # Try to download paper
-        response = requests.get(link, timeout=120)
+        try: response = requests.get(link, timeout=120)
+        except TimeoutError:
+            print(f"Timeout on {paper_id}")
+
         if response.status_code == 200:
             try:
                 with open(file_path, 'wb') as f:
