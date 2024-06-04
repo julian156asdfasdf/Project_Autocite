@@ -7,6 +7,7 @@ from RandomizeKaggleDB import read_json_DB
 import json
 import pickle
 from pylatexenc.latex2text import LatexNodes2Text
+import shutil
 
 from main import KAGGLEDB, ARXIV_IDS
 from thefuzz import fuzz
@@ -19,41 +20,86 @@ def ACCENT_CONVERTER(text):
     """
     Cleans the text from all latex equations and figures.
     """
+    # Remove all citations, label, and references:
+    text = re.sub(r'\\cite\{.*?\}', '', text)
+    text = re.sub(r'\\citep\{.*?\}', '', text)
+    text = re.sub(r'\\citet\{.*?\}', '', text)
+    text = re.sub(r'\\footcite\{.*?\}', '', text)
+    text = re.sub(r'\\label\{.*?\}', '', text)
+    text = re.sub(r'\\ref\{.*?\}', '', text)
 
     # Remove all begin-equations and begin-figures
     keywords_to_remove = ["figure", "equation", "equation\*", "align", "align\*", "gather", "gather\*"]
     for keyword in keywords_to_remove:
         string_pattern = r'\\begin\{'+keyword+r'\}.*?\\end\{'+keyword+r'\}'
         text = re.sub(string_pattern, '', text, flags=re.DOTALL)
-
-    # Remove all inline equations
-    equation_indexes = []
-    last_dollar_idx = -1
-    while "$" in text[last_dollar_idx+1:]:
-        idx_dollar = text.find("$", last_dollar_idx+1)
-        # If the dollar sign is the last character in the text, then break
-        if idx_dollar == len(text)-1:
-            break
-        # If the dollar sign is a command (Meaning not an equation)
-        if text[idx_dollar-1] == "\\":
-            last_dollar_idx = idx_dollar
-        # If there are two dollar signs in a row, then it is an row-equation
-        elif text[idx_dollar+1] == "$":
-            last_dollar_idx = text.find("$$", idx_dollar+2)+1
-            last_dollar_idx = (last_dollar_idx if last_dollar_idx != 0 else len(text))
-            equation_indexes.append([idx_dollar, last_dollar_idx])
-        else: # If there is only one dollar sign, then it is an inline-equation
-            last_dollar_idx = text.find("$", idx_dollar+1)
-            last_dollar_idx = (last_dollar_idx if last_dollar_idx != -1 else len(text))
-            equation_indexes.append([idx_dollar, last_dollar_idx])
-    for interval in reversed(equation_indexes):
-        text = text[:interval[0]] + " " + text[interval[1]+1:]
+    
+    dollar_index = text.find("$")
+    if dollar_index != -1:
+        # Remove all inline equations
+        equation_indexes = []
+        last_dollar_idx = -1
+        while "$" in text[last_dollar_idx+1:]:
+            idx_dollar = text.find("$", last_dollar_idx+1)
+            # If the dollar sign is the last character in the text, then break
+            if idx_dollar == len(text)-1:
+                break
+            # If the dollar sign is a command (Meaning not an equation)
+            if text[idx_dollar-1] == "\\":
+                last_dollar_idx = idx_dollar
+            # If there are two dollar signs in a row, then it is an row-equation
+            elif text[idx_dollar+1] == "$":
+                last_dollar_idx = text.find("$$", idx_dollar+2)+1
+                last_dollar_idx = (last_dollar_idx if last_dollar_idx != 0 else len(text))
+                equation_indexes.append([idx_dollar, last_dollar_idx])
+            else: # If there is only one dollar sign, then it is an inline-equation
+                last_dollar_idx = text.find("$", idx_dollar+1)
+                last_dollar_idx = (last_dollar_idx if last_dollar_idx != -1 else len(text))
+                equation_indexes.append([idx_dollar, last_dollar_idx])
+        for interval in reversed(equation_indexes):
+            text = text[:interval[0]] + " " + text[interval[1]+1:]
 
     # Cleans using pylatexenc.latex2text package
-    try:
-        text = ACCENT_CONVERTER_bad.latex_to_text(text)
-    except Exception as e:
-        return ""
+    # try:
+    #     text = ACCENT_CONVERTER_bad.latex_to_text(text)
+    # except Exception as e:
+    #     return ""
+
+    # Remove all latex commands
+    text_subtraction_size = 0
+    idx_backslash = text.find("\\")
+    while idx_backslash != -1:
+        # If the backslash is the last character in the text, then break
+        if idx_backslash == len(text)-1:
+            text = text[:idx_backslash]
+            break
+
+        # If the backslash is simply to write a special character, then remove it the backslash and keep the special character
+        if text[idx_backslash+1] in ["'", "`", "´"]:
+            text = text[:idx_backslash] + text[idx_backslash+1:]
+            idx_backslash = text.find("\\", idx_backslash+1)
+            continue 
+
+        # Define the characters that can break the command
+        break_chars = [" ", "{", "}", "\"", "'", "´", "`", "\\", "_", "^"]
+        end_backslash_idx = len(text)
+        extra_chars_removed = 0
+        for break_char in break_chars:
+            poss_end_backslash_idx = text.find(break_char, idx_backslash+1)
+            if poss_end_backslash_idx != -1: # If the break_char is in the text after the backslash
+                # If the new break_char appears closer to the backslash than the previous one, then update the end_backslash_idx
+                if poss_end_backslash_idx < end_backslash_idx and poss_end_backslash_idx > idx_backslash:
+                    end_backslash_idx = poss_end_backslash_idx
+                    if break_char in ["\\", "}", "_", "^"]:  # In these cases keep the name of the command
+                        extra_chars_removed = -(end_backslash_idx-idx_backslash)+1
+                    else: # Only remove the name of the command but keep break_char
+                        extra_chars_removed = 0
+        
+        text = text[:idx_backslash] + text[end_backslash_idx+extra_chars_removed:] # Remove the command from the text
+        text_subtraction_size += end_backslash_idx-idx_backslash+extra_chars_removed
+        idx_backslash = text.find("\\", idx_backslash) # Find the next backslash
+    text = text.replace("{","").replace("}","").strip() # Clean the string and return it
+    
     text = re.sub(r'\s+', ' ', text)
     text = re.sub(r'\n+', '\n', text)
     text = text.strip()
@@ -255,7 +301,10 @@ class step3_processing:
             for key, value in ref_json.items():
                 if value['ArXiV-ID']:
                     new_ref_json[key] = value
-            
+            if len(new_ref_json.keys()) == 0:
+                # Delete the directory tree if no references were matched
+                shutil.rmtree(os.path.join(self.file_dir, dir), ignore_errors=True)
+                continue
             with open(path, 'w') as f:
                 json.dump(new_ref_json, f)
         # return N_total, N_hits, N_none, set(None_articles)#, it_worked
@@ -350,7 +399,7 @@ if __name__ == "__main__":
     processing = step3_processing('Step_2', 'dataset.pkl')
     authors = processing.create_author_dict()
     processing.ref_matcher()
-    processing.build_dataset(update=False)
+    processing.build_dataset(update=False, context_size=500)
 
     # print(N_total, N_hits, N_none)
     # print(f'None_articles:{None_articles}')

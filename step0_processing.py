@@ -14,7 +14,7 @@ class step0_processing:
         self.target = target_name
         self.tar_links = []
         self.arxiv_papers = None
-        self.round_number = 0
+        self.round_number = 1
         self.start_idx = start_idx
         self.window_size = window_size
         self.end_idx = end_idx
