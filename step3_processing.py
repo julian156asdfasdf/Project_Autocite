@@ -50,10 +50,10 @@ def ACCENT_CONVERTER(text):
         text = text[:interval[0]] + " " + text[interval[1]+1:]
 
     # Cleans using pylatexenc.latex2text package
-    # try:
-    #     text = ACCENT_CONVERTER_bad.latex_to_text(text)
-    # except Exception as e:
-    #     return ""
+    try:
+        text = ACCENT_CONVERTER_bad.latex_to_text(text)
+    except Exception as e:
+        return ""
     text = re.sub(r'\s+', ' ', text)
     text = re.sub(r'\n+', '\n', text)
     text = text.strip()
@@ -305,11 +305,11 @@ class step3_processing:
                 new_context = ACCENT_CONVERTER(context)[-context_size:]
 
                 # Append the context to the dataset
-                self.dataset.append([main_txt[:-4].split('/')[-1], arXivID, new_context])
+                self.dataset.append([main_txt[:-4].split('/')[-1].split('\\')[-1], arXivID, new_context])
 
         return None
 
-    def build_dataset(self, update: bool=True) -> None:
+    def build_dataset(self, update: bool=True, context_size: int=500) -> None:
         """
         Builds the dataset.pkl file containing the context of each citation in the main.txt files.
 
@@ -333,7 +333,7 @@ class step3_processing:
         for dir in tqdm(os.listdir(self.file_dir), desc='Building dataset'):
             main_txt = os.path.join(self.file_dir,dir, dir +'.txt')
             ref_json = os.path.join(self.file_dir,dir, 'references.json')
-            self.map_context(main_txt, ref_json, context_size=300)
+            self.map_context(main_txt, ref_json, context_size=context_size)
 
         if update:
             pd_dataset = pd.DataFrame(self.dataset, columns=['main_arxiv_id', 'target_arxiv_id', 'context'])

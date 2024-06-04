@@ -302,7 +302,7 @@ class step2_processing:
             parsed = {}
             if dir not in os.listdir(self.target):
                 continue
-            ## LOOPING THROUGH THE DATA DIRECTORY ##
+            ## LOOPING THROUGH THE CONTENTS OF THE ARTICLE'S DIRECTORY ##
             for root, dirs, files in os.walk(os.path.join(self.data, dir)):
                 for file in files:
                     if file.lower().endswith(".bib"):
@@ -320,7 +320,7 @@ class step2_processing:
                         # Parse the .bbl file and append it to the list
                         parsed.update(parsebbl(bbl_str=bbl_content))
 
-            ## LOOKING AT THE TARGET DIRECTORY ##
+            ## GETTING THE REFERENCES FROM THE MAIN.TXT FILE ##
             file_directory = os.path.join(os.path.join(step_2_folder, dir), dir+".txt")
             extracted_ref = self.extract_references(file_directory)
             if extracted_ref != "": # if it found some references in the .txt file, update dict
@@ -339,6 +339,18 @@ class step2_processing:
             destination_dir = os.path.join(step_2_folder, dir)
             with open(os.path.join(destination_dir, "references.json"), 'w') as f:
                 json.dump(parsed, f)
+            
+            # Remove bibliography from the main.txt file
+            with open(file_directory, 'r', encoding=self.encoder) as f:
+                text_content = f.read()
+            # Find the start and end indices of the bibliography section
+            start_index = text_content.find(r"\begin{thebibliography}")
+            end_index = text_content.find(r"\end{thebibliography}") + len(r"\end{thebibliography}")
+            # Replace the bibliography section with an empty string
+            text_content = text_content[:start_index] + text_content[end_index:]
+            # Write the updated text content to the main.txt file
+            with open(file_directory, 'w', encoding=self.encoder) as f:
+                f.write(text_content)
 
 
 if __name__ == "__main__":

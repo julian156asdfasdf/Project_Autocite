@@ -226,7 +226,7 @@ def parsebbl(file_path = None, bbl_str = None):
             info = remove_latex_commands(info)
             first_author_lastname = get_first_author_lastname_from_info(info)
         else:
-            info = s
+            continue
 
         info = info.replace("\\textbf", "").replace("\\textit", "").replace("\\emph", "")
         info = re.sub(r'\s+', ' ', info) # Remove all extra whitespaces
