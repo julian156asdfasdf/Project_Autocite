@@ -8,6 +8,7 @@ import json
 import pickle
 from pylatexenc.latex2text import LatexNodes2Text
 import shutil
+from collections import defaultdict
 
 from main import KAGGLEDB, ARXIV_IDS
 from thefuzz import fuzz
@@ -341,10 +342,11 @@ class step3_processing:
         #     dataset = pickle.load(f)
 
         # Find all occurrences of the LaTeXID in the text and extract the context
+        dataset_add_counter = 0
         for LaTeXID, ref in ref_dict.items():
             arXivID = ref['ArXiV-ID']
-            indices = [m.start() for m in re.finditer(re.escape(LaTeXID), text)]
-            for index in indices:
+            cite_indices = [m.start() for m in re.finditer(re.escape(LaTeXID), text)]
+            for index in cite_indices:
                 if index > 5000: # Limit the context to 2000 characters before the LaTeXID
                     context = text[index-5000:index]
                 else:
@@ -353,9 +355,28 @@ class step3_processing:
                 # Remove all LaTeX commands from the context
                 new_context = ACCENT_CONVERTER(context)[-context_size:]
 
-                # Append the context to the dataset
-                self.dataset.append([main_txt[:-4].split('/')[-1].split('\\')[-1], arXivID, new_context])
+                # Check if the context contains too many math characters, and if so then skip it
+                def check_freq(x):
+                    freq = defaultdict(lambda: 0)
+                    for c in set(x):
+                        freq[c] = x.count(c)
+                    return freq
+                char_freq = check_freq(new_context)
+                math_chars = ['\\', '_', '^', '+', '-', '*', '/', '=', '(', ')', '<', '>', '|', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
+                math_sum = 0
+                for char in math_chars:
+                    math_sum += char_freq[char]
+                dirID = main_txt[:-4].split('/')[-1].split('\\')[-1]
+                if math_sum >= len(new_context)/10:
+                    continue
+                else:
+                    self.processedIDs.add(dirID)
 
+                # Append the context to the dataset
+                self.dataset.append([dirID, arXivID, new_context])
+                dataset_add_counter += 1
+        if dataset_add_counter == 0:
+            shutil.rmtree(os.path.join(self.file_dir, main_txt[:-4].split('/')[-1].split('\\')[-1]), ignore_errors=True)
         return None
 
     def build_dataset(self, update: bool=True, context_size: int=500) -> None:
@@ -373,24 +394,38 @@ class step3_processing:
             try:
                 with open(self.target, 'rb') as f:
                     self.dataset = pickle.load(f)
+                    self.processedIDs = set([d[0] for d in self.dataset])
             except:
                 update = False
                 self.dataset = []
+                self.processedIDs = set()
         else:
             self.dataset = []
+            self.processedIDs = set()
 
-        for dir in tqdm(os.listdir(self.file_dir), desc='Building dataset'):
+        self.notprocessedIDs = set()
+        # Skip the directory if it has already been processed
+        for dir in os.listdir(self.file_dir):
+            if dir not in self.processedIDs:
+                self.notprocessedIDs.add(dir)
+                
+        if len(self.notprocessedIDs) == 0:
+            print("All directories have already been processed.")
+
+        for dir in tqdm(self.notprocessedIDs, desc='Building dataset'):
+            # Get the main.txt and references.json file paths and map the context to the referenced arXivID and add it self.dataset
             main_txt = os.path.join(self.file_dir,dir, dir +'.txt')
             ref_json = os.path.join(self.file_dir,dir, 'references.json')
             self.map_context(main_txt, ref_json, context_size=context_size)
 
-        if update:
-            pd_dataset = pd.DataFrame(self.dataset, columns=['main_arxiv_id', 'target_arxiv_id', 'context'])
-            pd_dataset.drop_duplicates(inplace=True)
-            pd_dataset.to_pickle(self.target)
-        else:
-            with open(self.target, 'wb') as f:
-                pickle.dump(self.dataset, f)
+        # Remove duplicates from the dataset
+        data_tuple = [tuple(lst) for lst in self.dataset]
+        data_set = set(data_tuple)
+        self.dataset = [list(tup) for tup in data_set]
+
+        # Save the dataset to a .pkl file
+        with open(self.target, 'wb') as f:
+            pickle.dump(self.dataset, f)
     
         return None
 
