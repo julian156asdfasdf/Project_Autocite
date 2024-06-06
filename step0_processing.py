@@ -93,7 +93,7 @@ class step0_processing:
             for idx, link in enumerate(self.links, start=1):
                 paper_id = self.arxiv_papers['arxiv_id'][idx - 1] # Adjust index if necessary
                 futures.append(executor.submit(self.download_paper, link, paper_id))
-                time.sleep(3 + random.gauss(7,5)) # waits 10 seconds before requesting the next paper
+                time.sleep(3 + abs(random.gauss(7,5))) # waits 10 seconds before requesting the next paper
 
             for future in tqdm(as_completed(futures), desc="Downloading papers", total=self.window_size):
                 result = future.result()
