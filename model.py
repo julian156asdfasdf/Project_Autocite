@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 import torch.nn as nn
-from tqdm import tqdm
+from tqdm.auto import tqdm
 from scipy.spatial.distance import cosine
 from scipy.special import softmax
 from thefuzz import fuzz
@@ -9,93 +9,167 @@ import dataset_embedding
 import pandas as pd
 
 
-dataset =pd.DataFrame(pd.read_pickle('/Users/julianoll/Desktop/Fagprojekt/Project_Autocite/dataset.pkl'))
-dataset.columns = ['from_arxiv_id', 'to_arxiv_id', 'context']
+# dataset_embedding.download_dataset('dataset.pkl')
 
-test = dataset_embedding.transform_dataset(dataset)
+# dataset = pd.DataFrame(pd.read_pickle('dataset.pkl'))
+# dataset.columns = ['from_arxiv_id', 'to_arxiv_id', 'context']
 
-test_random = test.sample(frac=1).reset_index(drop=True)
+# test = dataset_embedding.transform_dataset(dataset)
 
+dataset = pd.read_pickle('transformed_dataset.pkl')
+
+# test_random = dataset.sample(frac=1).reset_index(drop=True)
 
 
 ##### NAIVE COSINE MODEL #####
-def naive_cosine(x, y):
+def naive_cosine(x, y) -> float:
     return cosine(x, y)
 
-cosines = []
-cosines_bad = []
-for i in range(len(test)-1):
-    cosines.append(naive_cosine(test['context'][i], test['abstract'][i]))
+# Calculate the top-k accuracy of the naive cosine model
+top_k = 10
+def top_k_accuracy(dataset: list=dataset, top_k: int=top_k) -> float:
+    correct = 0
+    for i in range(len(dataset)):
+        cosines = [naive_cosine(dataset[i][0], dataset[j][1]) for j in range(len(dataset))]
 
-    cosines_bad.append(naive_cosine(test_random['context'][i], test_random['abstract'][i]))
+        # Sort the cosine distances and get the top-k indices with the smallest distances
+        top_k_indices = np.argsort(cosines)[:top_k]
+        if i in top_k_indices:
+            correct += 1
+    return correct / len(dataset)
+
+print(top_k_accuracy(dataset, 20))
+
+# cosines = []
+# cosines_bad = []
+# for i in range(len(test)-1):
+#     cosines.append(naive_cosine(test['context'][i], test['abstract'][i]))
+
+#     cosines_bad.append(naive_cosine(test_random['context'][i], test_random['abstract'][i]))
 
 
-mean_1 =np.mean(cosines)
-mean_2= np.mean(cosines_bad)
-print(mean_1, mean_2)
+# mean_1 =np.mean(cosines)
+# mean_2= np.mean(cosines_bad)
+# print(mean_1, mean_2)
 
 
 ##### WEIGHTED COSINE MODEL #####
 
-# Initialize weight matrix (diagonal matrix of size 384x384)
-def initialize_weights():
-    return np.eye(384)
+# Define the loss function
+def weighted_cosine(x, y, weights) -> float:
+    return cosine(x, y, np.exp(weights))
 
-# Calculate probabilities of each class
-def Probs(x, y, W):
-    k = len(y)
-    # theta = np.zeros(k)
-    # for i in range(k):
-    #     theta[i] = np.exp(cosine(x, y[i], W)) / np.sum(np.exp(cosine(x, y, W)))
-    # probs = softmax(theta)
-    probs = softmax([cosine(x, y[i], W) for i in range(k)])
-    return probs
+# Initialize the weights
+weights = np.random.rand(384)
 
-# Calculate loss
-def Loss(x, y, W):
-    return -np.log(Probs(x, y, W))
+# Calculate the probability distribution of the cosine similarities
+def Probs(dataset: list=dataset, weights: np.ndarray=weights) -> np.ndarray:
+    cosines = []
+    for i in range(len(dataset)):
+        cosines.append(weighted_cosine(dataset[i][0], dataset[i][1], weights))
+    return softmax(cosines)
 
-# Calculate gradient
-def Gradient(x, y, W):
-    k = len(y)
-    grad = np.zeros((k, 384))
-    for i in range(k):
-        grad[i] = x - y[i]
+# Calculate the gradient of the loss function
+def gradient(dataset: list=dataset, weights: np.ndarray=weights) -> np.ndarray:
+    probs = Probs(dataset, weights)
+    grad = np.zeros(384)
+    for i in range(len(dataset)):
+        grad += (probs[i] - 1) * (dataset[i][0] - dataset[i][1])
     return grad
 
-# Update weights
-def Update(x, y, W, lr):
-    W -= lr * Gradient(x, y, W)
-    return W
+# Update the weights using gradient descent (weights must be positive)
+def update_weights(dataset: list=dataset, weights: np.ndarray=weights, lr: float=0.01) -> np.ndarray:
+    grad = gradient(dataset, weights)
+    weights -= lr * grad
+    return weights
 
-# Train model
-def train(x, y, W, lr, epochs):
-    for _ in tqdm(range(epochs)):
-        for i in range(len(x)):
-            W = Update(x[i], y, W, lr)
-    return W
+# Train the model
+def train_model(dataset: list=dataset, weights: np.ndarray=weights, num_epochs: int=10, lr: float=0.01) -> np.ndarray:
+    for epoch in range(num_epochs):
+        weights = update_weights(dataset, weights, lr)
+        print(f'Epoch {epoch+1}/{num_epochs}, Loss: {np.linalg.norm(gradient(dataset, weights))}')
+    return weights
 
-# Predict class
-def predict(x, y, W):
-    return Probs(x, y, W)
+# Split the dataset into training and testing sets
+split_index = int(len(dataset) * 0.8)
+weights = train_model(dataset[:split_index], weights, num_epochs=20, lr=0.001)
 
-# Evaluate model
-def evaluate(x, y, W):
-    return Loss(x, y, W)
+# Calculate the top-k accuracy of the weighted cosine model
+def top_k_accuracy_weighted(dataset: list=dataset, weights: np.ndarray=weights, top_k: int=top_k, split_index: int=split_index) -> float:
+    correct = 0
+    for i in range(len(dataset[split_index:])):
+        # cosines = [weighted_cosine(dataset[i+split_index][0], dataset[j+split_index][1], weights) for j in range(len(dataset[split_index:]))] # Guess among test points
+        cosines = [weighted_cosine(dataset[i+split_index][0], dataset[j][1], weights) for j in range(len(dataset))] # Guess among all data points
+        
+        # Sort the cosine distances and get the top-k indices with the smallest distances
+        top_k_indices = np.argsort(cosines)[:top_k]
+        if i in top_k_indices:
+            correct += 1
+    return correct / len(dataset[split_index:])
 
-# Main function
-def main():
-    x = np.random.rand(100, 384)
-    y = np.random.rand(100, 384)
-    W = initialize_weights()
-    lr = 0.01
-    epochs = 10
-    W = train(x, y, W, lr, epochs)
-    print(predict(x, y, W))
-    print(evaluate(x, y, W))
+print(top_k_accuracy_weighted(dataset, weights, 20, split_index))
 
-if __name__ == '__main__':
-    main()
+
+
+# # Initialize weight matrix (diagonal matrix of size 384x384)
+# def initialize_weights():
+#     return np.eye(384)
+
+# # Calculate probabilities of each class
+# def Probs(x, y, W):
+#     k = len(y)
+#     # theta = np.zeros(k)
+#     # for i in range(k):
+#     #     theta[i] = np.exp(cosine(x, y[i], W)) / np.sum(np.exp(cosine(x, y, W)))
+#     # probs = softmax(theta)
+#     probs = softmax([cosine(x, y[i], W) for i in range(k)])
+#     return probs
+
+# # Calculate loss
+# def Loss(x, y, W):
+#     return -np.log(Probs(x, y, W))
+
+# # Calculate gradient
+# def Gradient(x, y, W):
+#     k = len(y)
+#     grad = np.zeros((k, 384))
+#     for i in range(k):
+#         grad[i] = x - y[i]
+#     return grad
+
+# # Update weights
+# def Update(x, y, W, lr):
+#     W -= lr * Gradient(x, y, W)
+#     return W
+
+# # Train model
+# def train(x, y, W, lr, epochs):
+#     for _ in tqdm(range(epochs)):
+#         for i in range(len(x)):
+#             W = Update(x[i], y, W, lr)
+#     return W
+
+# # Predict class
+# def predict(x, y, W):
+#     return Probs(x, y, W)
+
+# # Evaluate model
+# def evaluate(x, y, W):
+#     return Loss(x, y, W)
+
+# # Main function
+# def main():
+#     x = np.random.rand(100, 384)
+#     y = np.random.rand(100, 384)
+#     W = initialize_weights()
+#     lr = 0.01
+#     epochs = 10
+#     W = train(x, y, W, lr, epochs)
+#     print(predict(x, y, W))
+#     print(evaluate(x, y, W))
+
+# if __name__ == '__main__':
+#     main()
 
 
 

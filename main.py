@@ -59,6 +59,6 @@ if __name__ == '__main__':
     print("Author dictionary created.")
     step_3.ref_matcher()
     print("References matched.")
-    step_3.build_dataset(update=False, context_size=500)
+    step_3.build_dataset(update=True, context_size=1000)
     print("Dataset built.")
     
