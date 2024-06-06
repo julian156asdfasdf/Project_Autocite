@@ -8,6 +8,8 @@ import numpy as np
 import shutil
 from main import KAGGLEDB, ARXIV_IDS
 from tqdm.auto import tqdm
+import time
+import random
 
 class step0_processing:
     def __init__(self, target_name="Step_0",start_idx=0, window_size=100, end_idx=100):
@@ -91,6 +93,7 @@ class step0_processing:
             for idx, link in enumerate(self.links, start=1):
                 paper_id = self.arxiv_papers['arxiv_id'][idx - 1] # Adjust index if necessary
                 futures.append(executor.submit(self.download_paper, link, paper_id))
+                time.sleep(3 + random.gauss(7,5)) # waits 10 seconds before requesting the next paper
 
             for future in tqdm(as_completed(futures), desc="Downloading papers", total=self.window_size):
                 result = future.result()
