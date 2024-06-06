@@ -406,6 +406,8 @@ class step3_processing:
         self.notprocessedIDs = set()
         # Skip the directory if it has already been processed
         for dir in os.listdir(self.file_dir):
+            if dir == '.DS_Store':
+                continue
             if dir not in self.processedIDs:
                 self.notprocessedIDs.add(dir)
                 
