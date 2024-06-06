@@ -25,13 +25,13 @@ if __name__ == '__main__':
     # Create sliding window for step 0-2
     for i in range(step_0.rounds):
     # step 0 Download tar files
-        print("Starting round " + str(step_0.round_number) + "...")
-        print("Downloading tar files...")
-        step_0.round_number += 1
-        step_0.create_target_folder()
-        step_0.get_tar_links(start_id=step_0.window_size*i+step_0.start_idx)
-        step_0.download_tar_files()
-        print("Downloaded tar files successfully.")
+        # print("Starting round " + str(step_0.round_number) + "...")
+        # print("Downloading tar files...")
+        # step_0.round_number += 1
+        # step_0.create_target_folder()
+        # step_0.get_tar_links(start_id=step_0.window_size*i+step_0.start_idx)
+        # step_0.download_tar_files()
+        # print("Downloaded tar files successfully.")
 
     # Step 1 Extract from .tar and remove irrelevant files
         print("\nStarting Step 1...")

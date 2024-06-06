@@ -6,13 +6,13 @@ from tqdm.auto import tqdm
 id_to_abstract_path = 'arXivIDs to Abstract_Subset_physics.json'
 ARXIVID_TO_ABSTRACT = read_json_DB(filepath=id_to_abstract_path)
 
-def get_abstract_from_arxiv_id(arxiv_id):
+def get_abstract_from_arxiv_id(arxiv_id: str) -> str:
     """
     Returns the abstract from the Kaggle DB given an arxiv_id
     """
     return ARXIVID_TO_ABSTRACT[arxiv_id]
 
-def transform_dataset(dataset, transformer = 'sentence-transformers/all-MiniLM-L6-v2'):
+def transform_dataset(dataset: list, transformer: str='sentence-transformers/all-MiniLM-L6-v2') -> list | None:
     """
     Takes the dataset in the form:
     dataset:    |Article ArXiV ID | Reference ArXiV ID | context |
@@ -37,7 +37,7 @@ def transform_dataset(dataset, transformer = 'sentence-transformers/all-MiniLM-L
         return None
     return transformed_dataset
 
-def download_dataset(filepath):
+def download_dataset(filepath: str) -> list | None:
     try:
         with open(filepath, 'rb') as f:
             dataset = pickle.load(f)
@@ -46,7 +46,7 @@ def download_dataset(filepath):
         return None
     return dataset
 
-def upload_transformed_dataset(transformed_dataset, filepath):
+def upload_transformed_dataset(transformed_dataset: str, filepath: str) -> str:
     try:
         with open(filepath, 'wb') as f:
             pickle.dump(transformed_dataset, f)
