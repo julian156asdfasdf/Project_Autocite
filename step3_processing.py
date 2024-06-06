@@ -17,7 +17,7 @@ from tqdm.auto import tqdm
 ACCENT_CONVERTER_bad = LatexNodes2Text()
 
 
-def ACCENT_CONVERTER(text):
+def ACCENT_CONVERTER(text: str) -> str:
     """
     Cleans the text from all latex equations and figures.
     """
@@ -30,7 +30,7 @@ def ACCENT_CONVERTER(text):
     text = re.sub(r'\\ref\{.*?\}', '', text)
 
     # Remove all begin-equations and begin-figures
-    keywords_to_remove = ["figure", "equation", "equation\*", "align", "align\*", "gather", "gather\*"]
+    keywords_to_remove = ["figure", "equation", r"equation\*", "align", r"align\*", "gather", r"gather\*"]
     for keyword in keywords_to_remove:
         string_pattern = r'\\begin\{'+keyword+r'\}.*?\\end\{'+keyword+r'\}'
         text = re.sub(string_pattern, '', text, flags=re.DOTALL)
@@ -209,7 +209,7 @@ class step3_processing:
 #Arg: target to match 
         # Out: list of possible matches
 
-    def fuzzy_string_match(self, target: str, poss_match_list: set):
+    def fuzzy_string_match(self, target: str, poss_match_list: set) -> str | None:
         '''
         Finds the the highest match to target from a list of possible candidates
         
@@ -311,7 +311,7 @@ class step3_processing:
         # return N_total, N_hits, N_none, set(None_articles)#, it_worked
         return None
 
-    def map_context(self, main_txt: str, ref_json: str, context_size: int=300) -> None:
+    def map_context(self, main_txt: str, ref_json: str, context_size: int=500) -> None:
         """
         Maps the context of a citation in a .txt file to the corresponding arXivID and adds it to a dataset.pkl file along with the main_txt and arXivID.
 
@@ -356,7 +356,7 @@ class step3_processing:
                 new_context = ACCENT_CONVERTER(context)[-context_size:]
 
                 # Check if the context contains too many math characters, and if so then skip it
-                def check_freq(x):
+                def check_freq(x) -> dict:
                     freq = defaultdict(lambda: 0)
                     for c in set(x):
                         freq[c] = x.count(c)

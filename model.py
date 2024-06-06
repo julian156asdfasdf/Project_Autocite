@@ -5,11 +5,34 @@ from tqdm import tqdm
 from scipy.spatial.distance import cosine
 from scipy.special import softmax
 from thefuzz import fuzz
+import dataset_embedding
+import pandas as pd
+
+
+dataset =pd.DataFrame(pd.read_pickle('/Users/julianoll/Desktop/Fagprojekt/Project_Autocite/dataset.pkl'))
+dataset.columns = ['from_arxiv_id', 'to_arxiv_id', 'context']
+
+test = dataset_embedding.transform_dataset(dataset)
+
+test_random = test.sample(frac=1).reset_index(drop=True)
+
+
 
 ##### NAIVE COSINE MODEL #####
 def naive_cosine(x, y):
     return cosine(x, y)
 
+cosines = []
+cosines_bad = []
+for i in range(len(test)-1):
+    cosines.append(naive_cosine(test['context'][i], test['abstract'][i]))
+
+    cosines_bad.append(naive_cosine(test_random['context'][i], test_random['abstract'][i]))
+
+
+mean_1 =np.mean(cosines)
+mean_2= np.mean(cosines_bad)
+print(mean_1, mean_2)
 
 
 ##### WEIGHTED COSINE MODEL #####

@@ -34,7 +34,8 @@ def remove_latex_commands(text: str) -> None:
             if idx >= equation_indexes[i][0]-text_subtraction_size and idx <= equation_indexes[i][1]-text_subtraction_size:
                 return True
         return False
-    text = text.replace("\'", "").replace("\`", "").replace("\´", "")
+    # text = text.replace("\'", "").replace("\`", "").replace("\´", "")
+    text = text.replace("'", "").replace("`", "").replace("´", "")
     # Remove all latex commands
     text_subtraction_size = 0
     idx_backslash = text.find("\\")
