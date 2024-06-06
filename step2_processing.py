@@ -29,6 +29,8 @@ class step2_processing:
         """
 
         for dir in os.listdir(self.data):
+            if dir == '.DS_Store':
+                continue
             new_folder = os.path.join(self.target, dir)
             os.makedirs(new_folder, exist_ok=True)
     
@@ -239,7 +241,9 @@ class step2_processing:
             None
         """
 
-        for root in tqdm(os.listdir(self.data), desc="Creating main.txt files"):
+        for root in tqdm(os.listdir(self.data), desc="Creating main.txt files"):            
+            if root == '.DS_Store':
+                continue
             new_main_file, doc_contents = self.merge_and_clean_tex_files(root)
 
             if new_main_file is not None:
@@ -299,6 +303,8 @@ class step2_processing:
         step_2_folder = os.path.join(base_folder, self.target)
         # Walk through directory
         for dir in tqdm(os.listdir(self.data), desc="Creating references.json files"):
+            if dir == '.DS_Store':
+                continue
             parsed = {}
             if dir not in os.listdir(self.target):
                 continue
