@@ -3,6 +3,7 @@ import numpy as np
 import torch.nn as nn
 from tqdm.auto import tqdm
 from scipy.spatial.distance import cosine
+from scipy.spatial.distance import euclidean
 from scipy.special import softmax
 from thefuzz import fuzz
 import dataset_embedding
@@ -10,35 +11,34 @@ import pandas as pd
 
 
 # dataset_embedding.download_dataset('dataset.pkl')
-
 # dataset = pd.DataFrame(pd.read_pickle('dataset.pkl'))
 # dataset.columns = ['from_arxiv_id', 'to_arxiv_id', 'context']
 
 # test = dataset_embedding.transform_dataset(dataset)
+# test_random = dataset.sample(frac=1).reset_index(drop=True)
 
 dataset = pd.read_pickle('transformed_dataset.pkl')
 
-# test_random = dataset.sample(frac=1).reset_index(drop=True)
 
 
 ##### NAIVE COSINE MODEL #####
-def naive_cosine(x, y) -> float:
-    return cosine(x, y)
+# def naive_cosine(x, y) -> float:
+#     return cosine(x, y)
 
-# Calculate the top-k accuracy of the naive cosine model
+# # Calculate the top-k accuracy of the naive cosine model
 top_k = 10
-def top_k_accuracy(dataset: list=dataset, top_k: int=top_k) -> float:
-    correct = 0
-    for i in range(len(dataset)):
-        cosines = [naive_cosine(dataset[i][0], dataset[j][1]) for j in range(len(dataset))]
+# def top_k_accuracy(dataset: list=dataset, top_k: int=top_k) -> float:
+#     correct = 0
+#     for i in range(len(dataset)):
+#         cosines = [naive_cosine(dataset[i][0], dataset[j][1]) for j in range(len(dataset))]
 
-        # Sort the cosine distances and get the top-k indices with the smallest distances
-        top_k_indices = np.argsort(cosines)[:top_k]
-        if i in top_k_indices:
-            correct += 1
-    return correct / len(dataset)
+#         # Sort the cosine distances and get the top-k indices with the smallest distances
+#         top_k_indices = np.argsort(cosines)[:top_k]
+#         if i in top_k_indices:
+#             correct += 1
+#     return correct / len(dataset)
 
-print(top_k_accuracy(dataset, 20))
+# print(top_k_accuracy(dataset, 20))
 
 # cosines = []
 # cosines_bad = []
@@ -51,6 +51,7 @@ print(top_k_accuracy(dataset, 20))
 # mean_1 =np.mean(cosines)
 # mean_2= np.mean(cosines_bad)
 # print(mean_1, mean_2)
+
 
 
 ##### WEIGHTED COSINE MODEL #####
@@ -86,20 +87,21 @@ def update_weights(dataset: list=dataset, weights: np.ndarray=weights, lr: float
 # Train the model
 def train_model(dataset: list=dataset, weights: np.ndarray=weights, num_epochs: int=10, lr: float=0.01) -> np.ndarray:
     for epoch in range(num_epochs):
-        weights = update_weights(dataset, weights, lr)
-        print(f'Epoch {epoch+1}/{num_epochs}, Loss: {np.linalg.norm(gradient(dataset, weights))}')
+        weights = update_weights(dataset[:split_index], weights, lr)
+        print(f'Epoch {epoch+1}/{num_epochs}, Train Loss: {np.linalg.norm(gradient(dataset[:split_index], weights))}')
+        print(f'Epoch {epoch+1}/{num_epochs}, Test Loss: {np.linalg.norm(gradient(dataset[split_index:], weights))}')
     return weights
 
 # Split the dataset into training and testing sets
 split_index = int(len(dataset) * 0.8)
-weights = train_model(dataset[:split_index], weights, num_epochs=20, lr=0.001)
+weights = train_model(dataset, weights, num_epochs=40, lr=0.0005)
 
 # Calculate the top-k accuracy of the weighted cosine model
 def top_k_accuracy_weighted(dataset: list=dataset, weights: np.ndarray=weights, top_k: int=top_k, split_index: int=split_index) -> float:
     correct = 0
     for i in range(len(dataset[split_index:])):
-        # cosines = [weighted_cosine(dataset[i+split_index][0], dataset[j+split_index][1], weights) for j in range(len(dataset[split_index:]))] # Guess among test points
-        cosines = [weighted_cosine(dataset[i+split_index][0], dataset[j][1], weights) for j in range(len(dataset))] # Guess among all data points
+        cosines = [weighted_cosine(dataset[i+split_index][0], dataset[j+split_index][1], weights) for j in range(len(dataset[split_index:]))] # Guess among test points
+        # cosines = [weighted_cosine(dataset[i+split_index][0], dataset[j][1], weights) for j in range(len(dataset))] # Guess among all data points
         
         # Sort the cosine distances and get the top-k indices with the smallest distances
         top_k_indices = np.argsort(cosines)[:top_k]
@@ -174,6 +176,28 @@ print(top_k_accuracy_weighted(dataset, weights, 20, split_index))
 
 
 
+##### NAIVE EUCLIDEAN MODEL #####
+
+def naive_euclidean(x, y) -> float:
+    return euclidean(x, y)
+
+# Calculate the top-k accuracy of the naive euclidean model
+def top_k_accuracy_euclidean(dataset: list=dataset, top_k: int=top_k) -> float:
+    correct = 0
+    for i in range(len(dataset)):
+        euclideans = [naive_euclidean(dataset[i][0], dataset[j][1]) for j in range(len(dataset))]
+
+        # Sort the euclidean distances and get the top-k indices with the smallest distances
+        top_k_indices = np.argsort(euclideans)[:top_k]
+        if i in top_k_indices:
+            correct += 1
+    return correct / len(dataset)
+
+print(top_k_accuracy_euclidean(dataset, 20))
+
+
+
+##### WEIGHTED EUCLIDEAN MODEL #####
 
 
 
