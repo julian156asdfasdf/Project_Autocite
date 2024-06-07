@@ -89,15 +89,15 @@ class Dataset(torch.utils.data.Dataset):
         return len(self.dataset)
 
     def __getitem__(self, idx):
-        return torch.Tensor(self.dataset[idx][0], device=device), torch.Tensor(self.dataset[idx][1], device=device)
+        return torch.tensor(self.dataset[idx][0], device=device), torch.tensor(self.dataset[idx][1], device=device)
 
 # Helper class for the loss function
 class WeightedCosineDistanceLoss(nn.Module):
     def __init__(self):
         super(WeightedCosineDistanceLoss, self).__init__()
 
-    def forward(self) -> torch.Tensor:
-        return 1 - (torch.matmul(torch.exp(self.W), u) @ torch.matmul(torch.exp(self.W), v)) / (torch.norm(torch.matmul(torch.exp(self.W), u)) * torch.norm(torch.matmul(torch.exp(self.W), v)))
+    def forward(self, u: torch.Tensor, v: torch.Tensor, W: torch.Tensor) -> torch.Tensor:
+        return 1 - (torch.matmul(torch.exp(W), u) @ torch.matmul(torch.exp(W), v)) / (torch.norm(torch.matmul(torch.exp(W), u)) * torch.norm(torch.matmul(torch.exp(W), v)))
 
 # Helper class for the optimizer
 class ProbOptimizer(torch.optim.Optimizer):
@@ -126,18 +126,18 @@ class ProbOptimizer(torch.optim.Optimizer):
                 p.data.add_(-group['lr'], grad)
 
 # Helper function to split the dataset into training and validation sets and create the dataloaders
-def split_dataset(dataset: list=dataset, batch_size: int=32, train_size: float=0.8):
+def split_dataset(dataset: list=dataset, batch_size: int=384, train_size: float=0.8):
     train_size = int(len(dataset) * train_size)
     train_dataset = Dataset(dataset[:train_size])
     val_dataset = Dataset(dataset[train_size:])
 
-    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=False)
     val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
 
     return train_loader, val_loader
 
 # Define the training loop
-def train_model(model, criterion, optimizer, train_loader, num_epochs: int=10, lr: float=0.01) -> None:
+def train_model(model, criterion, optimizer, train_loader, num_epochs: int=10) -> None:
     model.to(device)
     # best_val_loss = float('inf')
 
@@ -146,21 +146,25 @@ def train_model(model, criterion, optimizer, train_loader, num_epochs: int=10, l
         train_loss = 0
 
         for i, (inputs, targets) in enumerate(train_loader):
+            if i == 10:
+                continue
             inputs, targets = inputs.to(device), targets.to(device)
 
             # Forward pass
-            outputs = model(inputs)
-            loss = criterion(outputs, targets)
+            outputs = model(inputs, targets)
+            loss = criterion(outputs, targets, model.W)
             # loss = criterion(output, torch.ones(u.shape[0], device=device))
 
             # Backward pass and optimization
             optimizer.zero_grad()
-            loss.backward()
+            # loss.backward()
+            loss.mean().backward()
             optimizer.step()
-            train_loss += loss.item()
+            # train_loss += loss.item()
+            train_loss += loss.mean().item()
 
             if (i) % 100 == 0:
-                print(f'Epoch {epoch+1}/{num_epochs}, Step {i}/{len(train_loader)}, Loss: {loss.item()}')
+                print(f'Epoch {epoch+1}/{num_epochs}, Step {i}/{len(train_loader)}, Loss: {loss.mean().item()}')
             
         print(f'Epoch {epoch+1}/{num_epochs}, Training Loss: {train_loss / len(train_loader)}')
 
@@ -172,35 +176,36 @@ def evaluate_model(model, criterion, val_loader) -> None:
 
     with torch.no_grad():
         for i, (inputs, targets) in enumerate(val_loader):
+            if i == 10:
+                continue
             inputs, targets = inputs.to(device), targets.to(device)
 
             # Forward pass
-            outputs = model(inputs)
-            loss = criterion(outputs, targets)
-            val_loss += loss.item()
+            outputs = model(inputs, targets)
+            loss = criterion(outputs, targets, model.W)
+            # val_loss += loss.item()
+            val_loss += loss.mean().item()
 
         print(f'Validation Loss: {val_loss / len(val_loader)}')
 
 # Define the model
 class WeightedCosineDistanceModel(nn.Module):
-    def __init__(self, dataset: list=dataset, num_features: int=384, num_epochs: int=10, lr: float=0.01):
+    def __init__(self, num_features: int=384, device: torch.device=device):
+        super(WeightedCosineDistanceModel, self).__init__()
         self.W = nn.Parameter(torch.rand(num_features, num_features))
-        self.dataset = dataset
-        self.num_epochs = num_epochs
-        self.lr = lr
 
     def forward(self, u: torch.Tensor, v: torch.Tensor) -> torch.Tensor:
         return 1 - (torch.matmul(torch.exp(self.W), u) @ torch.matmul(torch.exp(self.W), v)) / (torch.norm(torch.matmul(torch.exp(self.W), u)) * torch.norm(torch.matmul(torch.exp(self.W), v)))
     
 
 
-model = WeightedCosineDistanceModel(dataset, num_features=384, num_epochs=10, lr=0.01)
+model = WeightedCosineDistanceModel(num_features=384, device=device)
 # optimizer = torch.optim.Adam(model.parameters(), lr=lr)
-optimizer = torch.optim.SGD(model.parameters(), lr=lr)
+optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
 # criterion = nn.CosineSimilarity()
 criterion = WeightedCosineDistanceLoss()
 
-train_loader, val_loader = split_dataset(dataset, batch_size=32, train_size=0.8)
+train_loader, val_loader = split_dataset(dataset, batch_size=384, train_size=0.8)
 
-train_model(model, criterion, optimizer, train_loader, val_loader, num_epochs=10, lr=0.01)
+train_model(model, criterion, optimizer, train_loader, num_epochs=10)
 evaluate_model(model, criterion, val_loader)
