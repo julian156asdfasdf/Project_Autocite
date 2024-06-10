@@ -174,7 +174,7 @@ class step3_processing:
         """
 
         # method 1, each key is name of author
-        for arxiv_id, value in tqdm(KAGGLEDB.items(), desc='Building author dictionary'):
+        for arxiv_id, value in tqdm(KAGGLEDB.items(), desc='Building author dictionary', leave=False):
             authors = value['authors']
             authors_list = authors.split(',')
             for author in authors_list:
@@ -257,7 +257,7 @@ class step3_processing:
         N_none = 0
         # it_worked = []
 
-        for dir in tqdm(os.listdir(self.file_dir), desc='Matching references'):
+        for dir in tqdm(os.listdir(self.file_dir), desc='Matching references', leave=False):
             path = os.path.join(self.file_dir,dir, 'references.json')
             ref_json = read_json_DB(path)
             for latex_id, ref in ref_json.items():
@@ -414,7 +414,7 @@ class step3_processing:
         if len(self.notprocessedIDs) == 0:
             print("All directories have already been processed.")
 
-        for dir in tqdm(self.notprocessedIDs, desc='Building dataset'):
+        for dir in tqdm(self.notprocessedIDs, desc='Building dataset', leave=False):
             # Get the main.txt and references.json file paths and map the context to the referenced arXivID and add it self.dataset
             main_txt = os.path.join(self.file_dir,dir, dir +'.txt')
             ref_json = os.path.join(self.file_dir,dir, 'references.json')

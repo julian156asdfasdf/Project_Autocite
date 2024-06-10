@@ -60,7 +60,7 @@ class step1_processing:
 
         unable_folder = set()
         files = os.listdir(self.data)
-        for file_name in tqdm(files, desc="Extracting .tar files"):
+        for file_name in tqdm(files, desc="Extracting .tar files", leave=False):
             if file_name[-4:].lower() =='.tar':
                 try:
                     #creates a folder in the directory folder for each paper

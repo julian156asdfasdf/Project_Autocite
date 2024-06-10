@@ -3,6 +3,7 @@ import random
 import torch
 import numpy as np
 import pandas as pd
+import sys
 import matplotlib.pyplot as plt
 import torch.nn as nn
 import torch.optim as optim
@@ -17,7 +18,8 @@ import dataset_embedding
 dataset = np.array(pd.read_pickle('transformed_dataset.pkl'))
 
 # Set the seed
-SEED = 3
+# SEED = 3
+SEED = 2
 random.seed(SEED)
 np.random.seed(SEED)
 torch.manual_seed(SEED)
@@ -31,9 +33,9 @@ device = torch.device('mps' if torch.backends.mps.is_available() else 'cuda' if 
 num_features = 384
 batch_size = 384
 num_epochs = 10
-lr = 0.001
+lr = 1e-3
 train_size = int(len(dataset) * 0.8)
-top_k = 10
+top_k = 20
 
 # Define the dataset
 class arXivDataset(Dataset):
@@ -75,11 +77,11 @@ class arXivDataset(Dataset):
     
 train_set = arXivDataset(dataset[:train_size],
                           train=True)
-train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True)
+train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True) # drop_last=True
 
 test_set = arXivDataset(dataset[train_size:], 
                          train=False)
-test_loader = DataLoader(test_set, batch_size=1, shuffle=False)
+test_loader = DataLoader(test_set, batch_size=1, shuffle=False) # Batch size must be 1 for top-k accuracy
 
 # Define the loss function
 class TripletLoss(nn.Module):
@@ -118,8 +120,13 @@ class TripletModel(nn.Module):
 
 # Create instances of the model, loss function and optimizer
 model = TripletModel(num_features).to(device)
-criterion = TripletLoss().to(device)
-# criterion = torch.jit.script(TripletLoss()).to(device)
+model = torch.jit.script(model) # Using TorchScript for performance
+
+# criterion = TripletLoss().to(device)
+criterion = torch.jit.script(TripletLoss()).to(device)
+# PyTorch also has a built-in TripletMarginLoss, but haven't tested whether it's compatible with the weight matrix approach
+# criterion = nn.TripletMarginLoss(margin=1.0, p=2)
+
 optimizer = optim.SGD(model.parameters(), lr=lr)
 
 # Training loop
@@ -130,6 +137,23 @@ def train_model(model: nn.Module,
                 num_epochs: int, 
                 eval_every: int,
                 plot_loss: bool=False) -> None:
+    """
+    Train the model using the triplet loss function.
+
+    Arguments:
+        model: A PyTorch model.
+        criterion: A PyTorch loss function.
+        optimizer: A PyTorch optimizer.
+        train_loader: A PyTorch DataLoader.
+        num_epochs: An integer specifying the number of epochs.
+        eval_every: An integer specifying the number of epochs between evaluations.
+        plot_loss: A boolean specifying whether to plot the training loss.
+
+    Returns:
+        None
+
+    """
+
     model.train()
     running_train_loss = np.array([])
 
@@ -169,6 +193,21 @@ def compute_topk_accuracy(model: nn.Module,
                           dataset: np.ndarray,
                           test_loader: DataLoader, 
                           k: int) -> float:
+    """
+    Compute the top-k accuracy of the model on the test set.
+
+    Arguments:
+        model: A PyTorch model.
+        criterion: A PyTorch loss function.
+        dataset: A NumPy array containing the dataset.
+        test_loader: A PyTorch DataLoader.
+        k: An integer specifying the top-k accuracy.
+
+    Returns:
+        A float representing the top-k accuracy.
+    
+    """
+
     model.eval()
     topk_accuracy = 0
     running_test_loss = np.array([])
@@ -195,7 +234,7 @@ def compute_topk_accuracy(model: nn.Module,
             if i in topk:
                 topk_accuracy += 1
                 
-    return topk_accuracy
+    return topk_accuracy / len(test_loader)
 
     # with torch.no_grad():
     #     for i, (anchor, positive, negative) in enumerate(tqdm(test_loader, desc='Testing', leave=False)):
@@ -224,10 +263,26 @@ def compute_topk_accuracy(model: nn.Module,
 
 # compute_topk_accuracy(model, criterion, dataset, test_loader, top_k)
 # Train the model
-train_model(model, criterion, optimizer, train_loader, num_epochs, eval_every=1)
+train_model(model, criterion, optimizer, train_loader, num_epochs=50, eval_every=1, plot_loss=False)
 
 # Evaluate the model
-compute_topk_accuracy(model, criterion, dataset, test_loader, top_k)
+accuracy = compute_topk_accuracy(model, criterion, dataset, test_loader, top_k)
+print(f'Top-{top_k} Accuracy: {accuracy}')
+
+# SEED = 1
+# Epoch 50/50, Training Loss: 0.07044965393096209
+# Top-20 Accuracy: 0.0070140280561122245
+
+# Save the model
+# torch.save(model.state_dict(), 'triplet_model.pth')
+# torch.save({"model_state_dict": model.state_dict(),
+#             "optimzier_state_dict": optimizer.state_dict()
+#            }, "triplet_model.pth")
+
+# Load the model
+# model = TripletModel(num_features).to(device)
+# model.load_state_dict(torch.load('triplet_model.pth'))
+# model.eval()
 
 # if __name__ == '__main__':
 #     # Train the model

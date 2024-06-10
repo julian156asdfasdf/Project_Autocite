@@ -90,7 +90,7 @@ class step0_processing:
 
         with ThreadPoolExecutor() as executor:
             futures = []
-            with tqdm(total=self.window_size, desc="Downloading papers") as pbar:
+            with tqdm(total=self.window_size, desc="Downloading papers", leave=False) as pbar:
                 for idx, link in enumerate(self.links, start=1):
                     paper_id = self.arxiv_papers['arxiv_id'][idx - 1] # Adjust index if necessary
                     futures.append(executor.submit(self.download_paper, link, paper_id))
