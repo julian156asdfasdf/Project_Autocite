@@ -436,7 +436,7 @@ if __name__ == "__main__":
     processing = step3_processing('Step_2', 'dataset.pkl')
     authors = processing.create_author_dict()
     processing.ref_matcher()
-    processing.build_dataset(update=False, context_size=500)
+    processing.build_dataset(update=True, context_size=1000)
 
     # print(N_total, N_hits, N_none)
     # print(f'None_articles:{None_articles}')
