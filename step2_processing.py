@@ -244,7 +244,13 @@ class step2_processing:
         for root in tqdm(os.listdir(self.data), desc="Creating main.txt files"):            
             if root == '.DS_Store':
                 continue
-            new_main_file, doc_contents = self.merge_and_clean_tex_files(root)
+            try: 
+                new_main_file, doc_contents = self.merge_and_clean_tex_files(root)
+            except:
+                # Delete the folder if there is an error reading a file in it
+                print("Found an error in merge_and_clean_tex_files, deleting folder.")
+                shutil.rmtree(os.path.join(self.target, root), ignore_errors=True)
+                continue
 
             if new_main_file is not None:
                 # Split the citations in the main file
