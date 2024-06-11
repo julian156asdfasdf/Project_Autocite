@@ -46,7 +46,7 @@ def download_dataset(filepath: str) -> list | None:
         return None
     return dataset
 
-def upload_transformed_dataset(transformed_dataset: str, filepath: str) -> str:
+def upload_dataset(transformed_dataset: str, filepath: str) -> str:
     try:
         with open(filepath, 'wb') as f:
             pickle.dump(transformed_dataset, f)
@@ -57,11 +57,19 @@ def upload_transformed_dataset(transformed_dataset: str, filepath: str) -> str:
 
 if __name__ == '__main__':
     # Load the dataset
-    dataset = download_dataset('dataset.pkl')
+    dataset = download_dataset('dataset.pkl')[:5000]
     if not dataset:
         exit()
-    transformed_dataset = transform_dataset(dataset)
-    if not transformed_dataset:
-        exit()
-    upload_transformed_dataset(transformed_dataset, 'transformed_dataset.pkl')
+    context_sizes = [50,100,200,300,400,500,600,700,800,900,1000]
+    for context_size in context_sizes:
+        dataset_short_context = [[datapoint[0], datapoint[1], datapoint[2][:context_size]] for datapoint in dataset]
+        transformed_dataset_short_context = transform_dataset(dataset_short_context)
+        if not transformed_dataset_short_context:
+            exit()
+        upload_dataset(dataset_short_context, f'dataset_length5000_contextsize{context_size}.pkl')
+        upload_dataset(transformed_dataset_short_context, f'transformed_dataset_length5000_contextsize{context_size}.pkl')
+    #transformed_dataset = transform_dataset(dataset)
+    #if not transformed_dataset:
+    #    exit()
+    #upload_dataset(transformed_dataset, 'transformed_dataset.pkl')
     
