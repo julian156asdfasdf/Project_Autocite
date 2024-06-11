@@ -5,6 +5,37 @@ from tqdm.auto import tqdm
 
 from parseBBL2 import remove_latex_commands
 
+# Process the dictionary
+def extract_info_title_authors(dictionary):
+    # Extract the relevant information
+    arxiv_id = dictionary['id']
+    title = remove_latex_commands(dictionary['title']) # Remove all latex commands from the title
+    authors = remove_latex_commands(dictionary['authors']) # Remove all latex commands from the authors
+    authors = re.sub(r'\s+', ' ', authors)
+    update_date = dictionary['update_date']
+    info = authors + ". " + re.sub(r'\s+', ' ', title) + ". " + update_date
+    # Remove all equations from title
+    idx_dollar = 0
+    while "$" in title[idx_dollar:]:
+        idx_dollar = title.find("$", idx_dollar)
+        if idx_dollar == len(title)-1:
+            break
+        if title[idx_dollar-1] == "\\":
+            idx_dollar = idx_dollar+1
+        elif title[idx_dollar+1] == "$":
+            end_dollar_idx = title.find("$", idx_dollar+2)+1
+            if end_dollar_idx == 0:
+                end_dollar_idx = len(title)
+            title = title[:idx_dollar] + title[end_dollar_idx+1:]
+        else:
+            end_dollar_idx = title.find("$", idx_dollar+1)
+            if end_dollar_idx == -1:
+                end_dollar_idx = len(title)
+            title = title[:idx_dollar] + title[end_dollar_idx+1:]
+    
+    title = re.sub(r'\s+', ' ', title).strip() # Remove all extra whitespaces
+    # Append the information to the new dataset as a dictionary
+    return {arxiv_id: {"info": info, "title": title, "authors": authors}}
 
 def randomizeKaggleDB(filepath = "Kaggle_Dataset.json", categories = []):
     # Load the Kaggle dataset
@@ -22,45 +53,14 @@ def randomizeKaggleDB(filepath = "Kaggle_Dataset.json", categories = []):
             dictionary = json.loads(row)
         else:
             dictionary = json.loads(row[:-1])
-        
-        # Process the dictionary
-        def extract_info_title_authors(dictionary):
-            # Extract the relevant information
-            arxiv_id = dictionary['id']
-            title = remove_latex_commands(dictionary['title']) # Remove all latex commands from the title
-            authors = remove_latex_commands(dictionary['authors']) # Remove all latex commands from the authors
-            authors = re.sub(r'\s+', ' ', authors)
-            update_date = dictionary['update_date']
-            info = authors + ". " + re.sub(r'\s+', ' ', title) + ". " + update_date
-            # Remove all equations from title
-            idx_dollar = 0
-            while "$" in title[idx_dollar:]:
-                idx_dollar = title.find("$", idx_dollar)
-                if idx_dollar == len(title)-1:
-                    break
-                if title[idx_dollar-1] == "\\":
-                    idx_dollar = idx_dollar+1
-                elif title[idx_dollar+1] == "$":
-                    end_dollar_idx = title.find("$", idx_dollar+2)+1
-                    if end_dollar_idx == 0:
-                        end_dollar_idx = len(title)
-                    title = title[:idx_dollar] + title[end_dollar_idx+1:]
-                else:
-                    end_dollar_idx = title.find("$", idx_dollar+1)
-                    if end_dollar_idx == -1:
-                        end_dollar_idx = len(title)
-                    title = title[:idx_dollar] + title[end_dollar_idx+1:]
-            
-            title = re.sub(r'\s+', ' ', title).strip() # Remove all extra whitespaces
-            # Append the information to the new dataset as a dictionary
-            LatexCleanedKaggleDB.update({arxiv_id: {"info": info, "title": title, "authors": authors}})
+
         # Extracts only the rows with the specified category
         if len(categories) == 0:
-            extract_info_title_authors(dictionary)
+            LatexCleanedKaggleDB.update(extract_info_title_authors(dictionary))
         else:
             for category in categories:
                 if category in dictionary['categories']: # others are 'math':650k, 'cs':850k, 'stat', 'eess', 'physics':250k, 'q-bio', 'q-fin', 'quant-ph', 'hep':350k
-                    extract_info_title_authors(dictionary)
+                    LatexCleanedKaggleDB.update(extract_info_title_authors(dictionary))
                     continue
     
     category_string = ""
