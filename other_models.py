@@ -146,7 +146,7 @@ def train_model(model, criterion, optimizer, train_loader, num_epochs: int=10) -
         train_loss = 0
 
         for i, (inputs, targets) in enumerate(train_loader):
-            if i == 10:
+            if inputs.size(0) != train_loader.batch_size:
                 continue
             inputs, targets = inputs.to(device), targets.to(device)
 
@@ -163,7 +163,7 @@ def train_model(model, criterion, optimizer, train_loader, num_epochs: int=10) -
             # train_loss += loss.item()
             train_loss += loss.mean().item()
 
-            if (i) % 100 == 0:
+            if (i) % 5 == 0:
                 print(f'Epoch {epoch+1}/{num_epochs}, Step {i}/{len(train_loader)}, Loss: {loss.mean().item()}')
             
         print(f'Epoch {epoch+1}/{num_epochs}, Training Loss: {train_loss / len(train_loader)}')
@@ -176,7 +176,7 @@ def evaluate_model(model, criterion, val_loader) -> None:
 
     with torch.no_grad():
         for i, (inputs, targets) in enumerate(val_loader):
-            if i == 10:
+            if inputs.size(0) != val_loader.batch_size:
                 continue
             inputs, targets = inputs.to(device), targets.to(device)
 

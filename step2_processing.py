@@ -241,7 +241,7 @@ class step2_processing:
             None
         """
 
-        for root in tqdm(os.listdir(self.data), desc="Creating main.txt files"):            
+        for root in tqdm(os.listdir(self.data), desc="Creating main.txt files", leave=False):            
             if root == '.DS_Store':
                 continue
             try: 
@@ -308,7 +308,7 @@ class step2_processing:
         base_folder = os.path.dirname(self.data)
         step_2_folder = os.path.join(base_folder, self.target)
         # Walk through directory
-        for dir in tqdm(os.listdir(self.data), desc="Creating references.json files"):
+        for dir in tqdm(os.listdir(self.data), desc="Creating references.json files", leave=False):
             if dir == '.DS_Store':
                 continue
             parsed = {}
