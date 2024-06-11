@@ -3,7 +3,7 @@ import random
 import torch
 import numpy as np
 import pandas as pd
-import sys
+import os
 import matplotlib.pyplot as plt
 import torch.nn as nn
 import torch.optim as optim
@@ -15,7 +15,7 @@ from scipy.special import softmax
 
 import dataset_embedding
 
-dataset = np.array(pd.read_pickle('transformed_dataset.pkl'))
+DATASET = np.array(pd.read_pickle('transformed_dataset.pkl'))
 
 # Set the seed
 # SEED = 3
@@ -33,8 +33,10 @@ device = torch.device('mps' if torch.backends.mps.is_available() else 'cuda' if 
 num_features = 384
 batch_size = 384
 num_epochs = 10
-lr = 1e-3
-train_size = int(len(dataset) * 0.8)
+lr = 1e-2
+margin = 0.8
+train_size = int(len(DATASET) * 0.9)
+# train_size = int(len(DATASET) * 0.99)
 top_k = 20
 
 # Define the dataset
@@ -74,12 +76,13 @@ class arXivDataset(Dataset):
             return anchor, positive, negative
         
         return anchor
-    
-train_set = arXivDataset(dataset[:train_size],
+
+# Split the dataset into a training and test set, and create DataLoaders
+train_set = arXivDataset(DATASET[:train_size],
                           train=True)
 train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True) # drop_last=True
 
-test_set = arXivDataset(dataset[train_size:], 
+test_set = arXivDataset(DATASET[train_size:], 
                          train=False)
 test_loader = DataLoader(test_set, batch_size=1, shuffle=False) # Batch size must be 1 for top-k accuracy
 
@@ -100,34 +103,25 @@ class TripletLoss(nn.Module):
 
 # Define the model
 class TripletModel(nn.Module):
-    def __init__(self, num_features, device=device):
+    def __init__(self, num_features, alpha=1.0, device=device):
         super(TripletModel, self).__init__()
         # self.fc = nn.Linear(num_features, 128)
         # self.W = nn.Parameter(torch.randn(num_features, num_features)) # Skal måske være np.eye(num_features)
         self.device = device
         self.W = nn.Parameter(torch.randn(num_features))
-        self.alpha = nn.Parameter(torch.randn(1))
-        self.A = torch.diag(torch.exp(self.W))
-        self.A = self.A.to(self.device)
+        # self.alpha = nn.Parameter(torch.randn(1))
+        self.alpha = torch.tensor(alpha)
 
     def forward(self, anchor: torch.Tensor, positive: torch.Tensor, negative: torch.Tensor) -> torch.Tensor:
-        D_pos = (anchor - positive).T @ self.A @ (anchor - positive)
-        D_neg = (anchor - negative).T @ self.A @ (anchor - negative)
+        A = torch.diag(torch.exp(self.W))
+        A = A.to(self.device)
+
+        D_pos = (anchor - positive).T @ A @ (anchor - positive)
+        D_neg = (anchor - negative).T @ A @ (anchor - negative)
 
         losses = torch.relu(D_pos - D_neg + self.alpha)
 
         return torch.mean(losses)
-
-# Create instances of the model, loss function and optimizer
-model = TripletModel(num_features).to(device)
-model = torch.jit.script(model) # Using TorchScript for performance
-
-# criterion = TripletLoss().to(device)
-criterion = torch.jit.script(TripletLoss()).to(device)
-# PyTorch also has a built-in TripletMarginLoss, but haven't tested whether it's compatible with the weight matrix approach
-# criterion = nn.TripletMarginLoss(margin=1.0, p=2)
-
-optimizer = optim.SGD(model.parameters(), lr=lr)
 
 # Training loop
 def train_model(model: nn.Module, 
@@ -156,6 +150,8 @@ def train_model(model: nn.Module,
 
     model.train()
     running_train_loss = np.array([])
+    start_time = time.time()
+    print(f'Starting training for {num_epochs} epochs at {time.strftime("%H:%M:%S", time.localtime(start_time))}...')
 
     for epoch in range(num_epochs):
         for i, (anchor, positive, negative) in enumerate(tqdm(train_loader, desc='Training', leave=False)):
@@ -166,7 +162,7 @@ def train_model(model: nn.Module,
             # params[0][1], params[1][1]
 
             # Forward pass
-            outputs = model(anchor, positive, negative)
+            # outputs = model(anchor, positive, negative)
             loss = criterion(anchor, positive, negative, model.W, model.alpha)
 
             # Backward pass and optimization
@@ -180,11 +176,23 @@ def train_model(model: nn.Module,
         if (epoch+1) % eval_every == 0:
             print(f'Epoch {epoch+1}/{num_epochs}, Training Loss: {running_train_loss.mean()}')
 
+    end_time = time.time()
+    print(f'Training finished. Took {time.strftime("%H:%M:%S", time.gmtime(end_time - start_time))}')
+
     if plot_loss:
+        fig, ax = plt.subplots()
         plt.plot(running_train_loss)
         plt.xlabel('Iterations')
         plt.ylabel('Loss')
         plt.title('Training Loss')
+        plot_text = f'Number of epochs: {num_epochs}\nOptimizer: Adam\nLearning rate: {lr}\nTraining size: {train_size}\nLoss function: Triplet Loss\nTime: {time.strftime("%H:%M:%S", time.gmtime(end_time - start_time))}'
+        props = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
+        # plt.figtext(0.5, 0.01, plot_text, wrap=True, horizontalalignment='center', fontsize=12)
+        ax.text(0.45, 0.95, plot_text, transform=ax.transAxes, fontsize=14,
+        verticalalignment='top', bbox=props)
+        # plt.tight_layout()
+        os.makedirs('Plots', exist_ok=True)
+        plt.savefig(f'Plots/triplet_loss_{time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime())}.png')
         plt.show()
 
 # Evaluation loop
@@ -211,6 +219,8 @@ def compute_topk_accuracy(model: nn.Module,
     model.eval()
     topk_accuracy = 0
     running_test_loss = np.array([])
+    start_time = time.time()
+    print(f'Starting testing at {time.strftime("%H:%M:%S", time.localtime(start_time))}...')
 
     with torch.no_grad():
         for i, anchor in enumerate(tqdm(test_loader, desc='Testing', leave=False)):
@@ -233,7 +243,10 @@ def compute_topk_accuracy(model: nn.Module,
 
             if i in topk:
                 topk_accuracy += 1
-                
+
+    end_time = time.time()
+    print(f'Testing finished. Took {time.strftime("%H:%M:%S", time.gmtime(end_time - start_time))}')
+
     return topk_accuracy / len(test_loader)
 
     # with torch.no_grad():
@@ -258,15 +271,26 @@ def compute_topk_accuracy(model: nn.Module,
             # outputs = model(anchor, positive, negative)
             # loss = criterion(anchor, positive, negative, model.W, model.alpha)
 
-            
-                
 
-# compute_topk_accuracy(model, criterion, dataset, test_loader, top_k)
+# Create instances of the model, loss function and optimizer
+model = TripletModel(num_features, alpha=margin).to(device)
+model = torch.jit.script(model) # Using TorchScript for performance
+
+# criterion = TripletLoss().to(device)
+criterion = torch.jit.script(TripletLoss()).to(device)
+# PyTorch also has a built-in TripletMarginLoss, but haven't tested whether it's compatible with the weight matrix approach
+# criterion = nn.TripletMarginLoss(margin=1.0, p=2)
+
+# optimizer = optim.SGD(model.parameters(), lr=lr)
+optimizer = optim.Adam(model.parameters(), lr=lr)    
+
+
+# compute_topk_accuracy(model, criterion, DATASET, test_loader, top_k)
 # Train the model
-train_model(model, criterion, optimizer, train_loader, num_epochs=50, eval_every=1, plot_loss=False)
+train_model(model, criterion, optimizer, train_loader, num_epochs=1, eval_every=1, plot_loss=True)
 
 # Evaluate the model
-accuracy = compute_topk_accuracy(model, criterion, dataset, test_loader, top_k)
+accuracy = compute_topk_accuracy(model, criterion, DATASET, test_loader, top_k)
 print(f'Top-{top_k} Accuracy: {accuracy}')
 
 # SEED = 1
