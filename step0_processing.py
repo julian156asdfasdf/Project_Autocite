@@ -93,8 +93,11 @@ class step0_processing:
             with tqdm(total=self.window_size, desc="Downloading papers", leave=False) as pbar:
                 for idx, link in enumerate(self.links, start=1):
                     paper_id = self.arxiv_papers['arxiv_id'][idx - 1] # Adjust index if necessary
-                    futures.append(executor.submit(self.download_paper, link, paper_id))
-                    time.sleep(3 + abs(random.gauss(7,5))) # waits 10 seconds before requesting the next paper
+                    try:
+                        futures.append(executor.submit(self.download_paper, link, paper_id))
+                    except Exception as e:
+                        print(f"Failed to download {link} with error")
+                    time.sleep(3 + abs(random.gauss(3,1))) # waits 10 seconds before requesting the next paper
                     pbar.update(1)
 
             # for future in tqdm(as_completed(futures), desc="Downloading papers", total=self.window_size):

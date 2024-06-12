@@ -7,7 +7,7 @@ from scipy.special import softmax
 from thefuzz import fuzz
 import dataset_embedding
 import pandas as pd
-from scipy.spatial.distance import euclidean
+from scipy.spatial.distance import euclidean, cityblock
 
 
 
@@ -19,7 +19,7 @@ class model_training_and_testing:
         self.weights = weights
         self.model = model
         self.dataset = dataset
-        self.split_index = int(len(self.dataset)*0.8)
+        self.split_index = 0 #int(len(self.dataset)*0.8)
         self.lr = lr
         self.num_epochs = num_epochs
         self.topk = topk
@@ -74,14 +74,19 @@ class model_training_and_testing:
 def diagonal_euclidean_func(x, y, weights) -> float:
         return euclidean(x, y, np.exp(weights))
 
-def naive_euclidean():
+def naive_euclidean(model):
     # Naive euclidean
-    weights = np.zeros(384)  
+    if model=="mpnet" or model=="snow":
+        weights = np.zeros(768)
+    else:
+        weights = np.zeros(384)
+    # elif model == "":
+    
     naive_euclidean = model_training_and_testing(weights=weights, dataset = dataset, model = diagonal_euclidean_func)
     topk_performance = naive_euclidean.top_k_accuracy_weighted()
     print(f'Naive Euclidean: {topk_performance}')
 
-def diagonal_euclidean():
+def diagonal_euclidean(model="mpnet"):
     # Diagonal Euclidean
     weights = np.random.rand(384)
     cosine_class = model_training_and_testing(weights=weights, dataset = dataset, model = diagonal_euclidean_func)
@@ -103,12 +108,29 @@ def matrix_euclidean():
 def diagonal_cosine_func(x, y, weights) -> float:
     return cosine(x, y, np.exp(weights))
 
-def naive_cosine():
+def naive_cosine(model):
     # Naive cosine
-    weights = np.zeros(384)  
+    if model=="mpnet" or model=="snow":
+        weights = np.zeros(768)
+    elif model=="MiniLM":
+        weights = np.zeros(384)
     cosine_class = model_training_and_testing(weights=weights, dataset = dataset, model = diagonal_cosine_func)
     topk_performance = cosine_class.top_k_accuracy_weighted()
     print(f'naive cosine: {topk_performance}')
+
+def diagonal_manhattan_func(x, y, weights) -> float:
+    return cityblock(x, y, np.exp(weights))
+
+def naive_manhattan(model):
+    # Naive cosine
+    if model=="mpnet" or model=="snow":
+        weights = np.zeros(768)
+    elif model=="MiniLM":
+        weights = np.zeros(384)
+    cosine_class = model_training_and_testing(weights=weights, dataset = dataset, model = diagonal_manhattan_func)
+    topk_performance = cosine_class.top_k_accuracy_weighted()
+    print(f'naive Manhattan: {topk_performance}')
+
 
 def diagonal_cosine():
     # Diagonal Cosine
@@ -131,16 +153,24 @@ def matrix_cosine():
     print(f'Matrix cosine: {topk_performance}')
 
 
-def main():
-    naive_euclidean()
-    diagonal_euclidean()
-    matrix_euclidean()
+def main(model):
+    # naive_euclidean(model)
+    # diagonal_euclidean(model)
+    # matrix_euclidean()
 
-    naive_cosine()
-    diagonal_cosine()
-    matrix_cosine()
+    # naive_cosine(model)
+    naive_manhattan(model)
+    # diagonal_cosine()
+    # matrix_cosine()
 
 if __name__ == "__main__":
-    dataset = pd.read_pickle('transformed_dataset.pkl')[:1000]
-    main()
+    dataset = pd.read_pickle('transformed_dataset_mpnet_contextsize300.pkl')[:5000]
+    print("\nmpnet: ")
+    main(model = "mpnet")
+    dataset = pd.read_pickle('transformed_dataset_MiniLM_contextsize300.pkl')[:5000]
+    print("\nMiniLM: ")
+    main(model="MiniLM")    
+    dataset = pd.read_pickle('transformed_dataset_snow_contextsize300.pkl')[:5000]
+    print("\nsnow: ")
+    main(model="snow")
     
