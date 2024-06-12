@@ -12,7 +12,8 @@ def get_abstract_from_arxiv_id(arxiv_id: str) -> str:
     """
     return ARXIVID_TO_ABSTRACT[arxiv_id]
 
-def transform_dataset(dataset: list, transformer: str='sentence-transformers/all-MiniLM-L6-v2') -> list | None:
+def transform_dataset(dataset: list, transformer: str="Snowflake/snowflake-arctic-embed-m"
+) -> list | None:
     """
     Takes the dataset in the form:
     dataset:    |Article ArXiV ID | Reference ArXiV ID | context |
@@ -60,7 +61,7 @@ if __name__ == '__main__':
     dataset = download_dataset('dataset.pkl')[:5000]
     if not dataset:
         exit()
-    context_sizes = [50,100,200,300,400,500,600,700,800,900,1000]
+    context_sizes = [300]
     for context_size in context_sizes:
         dataset_short_context = [[datapoint[0], datapoint[1], datapoint[2][:context_size]] for datapoint in dataset]
         transformed_dataset_short_context = transform_dataset(dataset_short_context)

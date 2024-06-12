@@ -17,7 +17,7 @@ if __name__ == '__main__':
     step_2_target_name = "Step_2"
     step_3_target_name = "dataset.pkl"
     # Remember to update the start_idx, window_size and end_idx to the desired values
-    step_0 = step0_processing(target_name=step_0_target_name, start_idx=0, window_size=100, end_idx=100)
+    step_0 = step0_processing(target_name=step_0_target_name, start_idx=57000, window_size=250, end_idx=60000)
     step_1 = step1_processing(directory = step_0_target_name, target_name = step_1_target_name)
     step_2 = step2_processing(directory = step_1_target_name, target_name = step_2_target_name)
     step_3 = step3_processing(directory = step_2_target_name, target_name = step_3_target_name)
@@ -25,13 +25,13 @@ if __name__ == '__main__':
     # Create sliding window for step 0-2
     for i in range(step_0.rounds):
     # step 0 Download tar files
-        # print("Starting round " + str(step_0.round_number) + "...")
-        # print("Downloading tar files...")
-        # step_0.round_number += 1
-        # step_0.create_target_folder()
-        # step_0.get_tar_links(start_id=step_0.window_size*i+step_0.start_idx)
-        # step_0.download_tar_files()
-        # print("Downloaded tar files successfully.")
+        print("Starting round " + str(step_0.round_number) + "...")
+        print("Downloading tar files...")
+        step_0.round_number += 1
+        step_0.create_target_folder()
+        step_0.get_tar_links(start_id=step_0.window_size*i+step_0.start_idx)
+        step_0.download_tar_files()
+        print("Downloaded tar files successfully.")
 
     # Step 1 Extract from .tar and remove irrelevant files
         print("\nStarting Step 1...")
