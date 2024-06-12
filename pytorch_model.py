@@ -15,7 +15,8 @@ from scipy.special import softmax
 
 import dataset_embedding
 
-DATASET = np.array(pd.read_pickle('transformed_dataset.pkl'))
+# DATASET = np.array(pd.read_pickle('transformed_dataset.pkl'))
+DATASET = np.array(pd.read_pickle('transformed_dataset_length5000_contextsize300.pkl'))
 
 # Set the seed
 # SEED = 3
@@ -27,18 +28,13 @@ torch.manual_seed(SEED)
 ##### TRIPLET LOSS PYTORCH MODEL #####
 
 # Define the device
-device = torch.device('mps' if torch.backends.mps.is_available() else 'cuda' if torch.cuda.is_available() else 'cpu')
+# MPS is only faster for very large tensors/batch sizes
+# device = torch.device('mps' if torch.backends.mps.is_available() else 'cuda' if torch.cuda.is_available() else 'cpu') 
+device = torch.device('cpu')
 
 # Define variables
-num_features = 384
-# batch_size = 384
 batch_size = 64
-num_epochs = 50
-lr = 5e-3
-margin = 0.1
 train_size = int(len(DATASET) * 0.9)
-# train_size = int(len(DATASET) * 0.99)
-top_k = 20
 
 # Define the dataset
 class arXivDataset(Dataset):
@@ -56,6 +52,7 @@ class arXivDataset(Dataset):
 
     def __getitem__(self, idx):
         anchor = self.contexts[idx]
+        target_article = self.articles[idx]
 
         if self.is_train:
             positive_list = np.unique(np.where(self.articles == self.articles[idx])[0])
@@ -76,7 +73,7 @@ class arXivDataset(Dataset):
 
             return anchor, positive, negative
         
-        return anchor
+        return anchor, target_article
 
 # Split the dataset into a training and test set, and create DataLoaders
 train_set = arXivDataset(DATASET[:train_size],
@@ -144,7 +141,7 @@ def train_model(model: nn.Module,
                 criterion: nn.Module, 
                 optimizer: optim.Optimizer, 
                 train_loader: DataLoader, 
-                num_epochs: int, 
+                num_epochs: int=10, 
                 print_loss: bool=True, 
                 save_model: bool=False,
                 eval_every: int | None=None,
@@ -177,6 +174,7 @@ def train_model(model: nn.Module,
     print(f'Starting training for {num_epochs} epochs at {time.strftime("%H:%M:%S", time.localtime(start_time))}...')
 
     for epoch in range(num_epochs):
+        epoch_train_loss = np.array([])
         for i, (anchor, positive, negative) in enumerate(tqdm(train_loader, desc='Training', leave=False)):
             # if anchor.size(0) != model.W.size(0):
             #     continue
@@ -194,16 +192,17 @@ def train_model(model: nn.Module,
                 loss.backward()
                 optimizer.step()
 
+            epoch_train_loss = np.append(epoch_train_loss, loss.item())
             running_train_loss = np.append(running_train_loss, loss.item())
 
         if print_loss:
-            print(f'Epoch {epoch+1}/{num_epochs}, Training Loss: {running_train_loss.mean()}')
+            print(f'Epoch {epoch+1}/{num_epochs}, Epoch Loss: {epoch_train_loss.mean()}, Running Training Loss: {running_train_loss.mean()}')
         
         if save_model:
             torch.save(model.state_dict(), 'triplet_model.pth')
 
         if eval_every is not None and eval_every > 0 and (epoch+1) % eval_every == 0:
-            accuracy = compute_topk_accuracy(model, criterion, DATASET, train_loader, test_loader, top_k, mini_eval=True)
+            accuracy = compute_topk_accuracy(model, criterion, DATASET, test_loader, top_k, mini_eval=True)
             running_topk_accuracy = np.append(running_topk_accuracy, accuracy)
             print(37*'-')
             print(f'Top-{top_k} Accuracy: {accuracy}')
@@ -246,9 +245,7 @@ def train_model(model: nn.Module,
 
 # Evaluation loop
 def compute_topk_accuracy(model: nn.Module, 
-                          criterion: nn.Module,
                           dataset: np.ndarray=DATASET,
-                          train_loader: DataLoader=train_loader,
                           test_loader: DataLoader=test_loader,
                           k: int=20,
                           mini_eval: bool=False) -> float:
@@ -261,7 +258,7 @@ def compute_topk_accuracy(model: nn.Module,
         dataset: A NumPy array containing the dataset.
         test_loader: A PyTorch DataLoader.
         k: An integer specifying the top-k accuracy.
-        mini_eval: A boolean specifying whether to evaluate on a subset of the test set.
+        mini_eval: A boolean specifying whether to perform a mini evaluation.
 
     Returns:
         A float representing the top-k accuracy.
@@ -278,31 +275,40 @@ def compute_topk_accuracy(model: nn.Module,
     # A = A.to(model.device)
 
     if mini_eval:
-        total = 50
+        total = 200
     else:
         total = len(test_loader)
 
     with torch.no_grad():
-        for i, anchor in enumerate(tqdm(test_loader, desc='Testing', total=total, leave=False)):
-            if mini_eval and i > 50:
+        for i, (anchor, target_article) in enumerate(tqdm(test_loader, desc='Testing', total=total, leave=False)):
+            if mini_eval and i > 200:
                 break
             # if anchor.size(1) != model.W.size(0):
             #     continue
-            anchor = anchor.to(device)
-            distances = np.array([])
+            anchor, target_article = anchor.to(device), target_article.to(device)
+            distance_to_target = (anchor - target_article) @ A @ (anchor - target_article).T
+            # distances = np.array([])
+            closer_dist_counter = 0
 
-            for article in dataset[:, 1]:
+            for article in np.unique(dataset[:, 1], axis=0):
                 article = torch.from_numpy(article).to(device) #.unsqueeze(0)
 
-                # Compute distances to all possible articles
+                # Compute distances to all possible articles, and check if the distance to the target article is smaller
                 D = (anchor - article) @ A @ (anchor - article).T
-                distances = np.append(distances, D.item())
+                if D < distance_to_target:
+                    closer_dist_counter += 1
+                if closer_dist_counter >= k:
+                    break
 
-            # Get the top k articles
-            topk = np.argsort(distances)[:k]
-
-            if i + len(train_loader) * train_loader.batch_size in topk:
+                # distances = np.append(distances, D.item())
+            # If the target article is among the k closest articles, increment the top-k accuracy
+            if closer_dist_counter < k:
                 topk_accuracy += 1
+            # Get the top k articles
+            # topk = np.argsort(distances)[:k]
+
+            # if i + len(train_loader) * train_loader.batch_size in topk:
+            #     topk_accuracy += 1
     model.train()
 
     end_time = time.time()
@@ -332,6 +338,13 @@ def compute_topk_accuracy(model: nn.Module,
             # outputs = model(anchor, positive, negative)
             # loss = criterion(anchor, positive, negative, model.W, model.alpha)
 
+# Define variables
+num_features = 384
+num_epochs = 100000
+lr = 5e-3
+margin = 0.2
+top_k = 20
+
 # Create instances of the model, loss function and optimizer
 model = TripletModel(num_features, alpha=margin).to(device)
 # model.load_state_dict(torch.load('triplet_model.pth')) # Load the model
@@ -354,8 +367,8 @@ train_model(model,
             train_loader, 
             num_epochs=num_epochs, 
             print_loss=True,
-            save_model=False,
-            eval_every=5, 
+            save_model=True,
+            eval_every=50, 
             plot_loss=True,
             plot_eval=True)
 
