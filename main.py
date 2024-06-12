@@ -29,7 +29,7 @@ if __name__ == '__main__':
     # step 0 Download tar files
         step0_start_time = time.time()
         # print("Starting round " + str(step_0.round_number) + " at " + str(step0_start_time) + "...") #TODO: Add total rounds, e.g., "Starting round 1/10..."
-        print(f"Starting round {step_0.round_number} at {time.strftime("%H:%M:%S", time.localtime(step0_start_time))}...")
+        print(f"Starting round {step_0.round_number} of {step_0.rounds} at {time.strftime("%H:%M:%S", time.localtime(step0_start_time))}...")
         print("Downloading tar files...")
         step_0.round_number += 1
         step_0.create_target_folder()

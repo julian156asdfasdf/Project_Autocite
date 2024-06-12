@@ -31,7 +31,8 @@ device = torch.device('mps' if torch.backends.mps.is_available() else 'cuda' if 
 
 # Define variables
 num_features = 384
-batch_size = 384
+# batch_size = 384
+batch_size = 64
 num_epochs = 50
 lr = 5e-3
 margin = 0.1
@@ -94,8 +95,15 @@ class TripletLoss(nn.Module):
     def forward(self, anchor: torch.Tensor, positive: torch.Tensor, negative: torch.Tensor, W: torch.Tensor, margin: torch.Tensor) -> torch.Tensor:
         A = torch.diag(torch.exp(W))
         
-        D_pos = (anchor - positive).T @ A @ (anchor - positive)
-        D_neg = (anchor - negative).T @ A @ (anchor - negative)
+        # D_pos = torch.empty(64)
+        # D_neg = torch.empty(64)
+
+        # for i in range(anchor.size(0)):
+        #     D_pos[i] = (anchor[i] - positive[i]) @ A @ (anchor[i] - positive[i])
+        #     D_neg[i] = (anchor[i] - negative[i]) @ A @ (anchor[i] - negative[i])
+
+        D_pos = torch.diag((anchor - positive) @ A @ (anchor - positive).T)
+        D_neg = torch.diag((anchor - negative) @ A @ (anchor - negative).T)
 
         losses = torch.relu(D_pos - D_neg + margin)
 
@@ -117,8 +125,15 @@ class TripletModel(nn.Module):
         A = torch.diag(torch.exp(self.W))
         A = A.to(self.device)
 
-        D_pos = (anchor - positive).T @ A @ (anchor - positive)
-        D_neg = (anchor - negative).T @ A @ (anchor - negative)
+        # D_pos = torch.empty(64)
+        # D_neg = torch.empty(64)
+
+        # for i in range(anchor.size(0)):
+        #     D_pos[i] = (anchor[i] - positive[i]) @ A @ (anchor[i] - positive[i])
+        #     D_neg[i] = (anchor[i] - negative[i]) @ A @ (anchor[i] - negative[i])
+
+        D_pos = torch.diag((anchor - positive) @ A @ (anchor - positive).T)
+        D_neg = torch.diag((anchor - negative) @ A @ (anchor - negative).T)
 
         losses = torch.relu(D_pos - D_neg + self.alpha)
 
@@ -163,8 +178,8 @@ def train_model(model: nn.Module,
 
     for epoch in range(num_epochs):
         for i, (anchor, positive, negative) in enumerate(tqdm(train_loader, desc='Training', leave=False)):
-            if anchor.size(0) != model.W.size(0):
-                continue
+            # if anchor.size(0) != model.W.size(0):
+            #     continue
             anchor, positive, negative = anchor.to(device), positive.to(device), negative.to(device)
             # params = [(n, p) for n, p in model.named_parameters()]
             # params[0][1], params[1][1]
@@ -188,7 +203,7 @@ def train_model(model: nn.Module,
             torch.save(model.state_dict(), 'triplet_model.pth')
 
         if eval_every is not None and eval_every > 0 and (epoch+1) % eval_every == 0:
-            accuracy = compute_topk_accuracy(model, criterion, DATASET, test_loader, top_k, mini_eval=True)
+            accuracy = compute_topk_accuracy(model, criterion, DATASET, train_loader, test_loader, top_k, mini_eval=True)
             running_topk_accuracy = np.append(running_topk_accuracy, accuracy)
             print(37*'-')
             print(f'Top-{top_k} Accuracy: {accuracy}')
@@ -233,7 +248,8 @@ def train_model(model: nn.Module,
 def compute_topk_accuracy(model: nn.Module, 
                           criterion: nn.Module,
                           dataset: np.ndarray=DATASET,
-                          test_loader: DataLoader=test_loader, 
+                          train_loader: DataLoader=train_loader,
+                          test_loader: DataLoader=test_loader,
                           k: int=20,
                           mini_eval: bool=False) -> float:
     """
@@ -258,32 +274,34 @@ def compute_topk_accuracy(model: nn.Module,
     start_time = time.time()
     print(f'Starting testing at {time.strftime("%H:%M:%S", time.localtime(start_time))}...')
 
-    # Select a subset of the test set for a mini evaluation
+    A = torch.diag(torch.exp(model.W))
+    # A = A.to(model.device)
+
     if mini_eval:
-        reference_data = dataset[:-200, 1]
+        total = 50
     else:
-        reference_data = dataset[:, 1]
+        total = len(test_loader)
 
     with torch.no_grad():
-        for i, anchor in enumerate(tqdm(test_loader, desc='Testing', leave=False)):
-            if anchor.size(1) != model.W.size(0):
-                continue
+        for i, anchor in enumerate(tqdm(test_loader, desc='Testing', total=total, leave=False)):
+            if mini_eval and i > 50:
+                break
+            # if anchor.size(1) != model.W.size(0):
+            #     continue
             anchor = anchor.to(device)
             distances = np.array([])
 
-            for j, article in enumerate(reference_data):
-                article = torch.from_numpy(article).to(device)
+            for article in dataset[:, 1]:
+                article = torch.from_numpy(article).to(device) #.unsqueeze(0)
 
                 # Compute distances to all possible articles
-                A = torch.diag(torch.exp(model.W))
-                A = A.to(model.device)
                 D = (anchor - article) @ A @ (anchor - article).T
                 distances = np.append(distances, D.item())
 
             # Get the top k articles
             topk = np.argsort(distances)[:k]
 
-            if i in topk:
+            if i + len(train_loader) * train_loader.batch_size in topk:
                 topk_accuracy += 1
     model.train()
 
