@@ -265,7 +265,7 @@ def compute_topk_accuracy(model: nn.Module,
             closer_dist_counter = 0
 
             for article in targets:
-                article = torch.from_numpy(article).to(device) #.unsqueeze(0)
+                article = torch.from_numpy(article).to(model.device) #.unsqueeze(0)
 
                 # Compute distances to all possible articles, and check if the distance to the target article is smaller
                 # D = (anchor - article) @ A @ (anchor - article).T
