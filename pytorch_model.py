@@ -156,7 +156,7 @@ def train_model(model: nn.Module,
     for epoch in range(num_epochs):
         epoch_train_loss = np.array([])
         for i, (anchor, positive, negative) in enumerate(tqdm(train_loader, desc='Training', leave=False)):
-            anchor, positive, negative = anchor.to(device), positive.to(device), negative.to(device)
+            anchor, positive, negative = anchor.to(model.device), positive.to(model.device), negative.to(model.device)
 
             # Forward pass
             # outputs = model(anchor, positive, negative)
@@ -258,7 +258,7 @@ def compute_topk_accuracy(model: nn.Module,
         for i, (anchor, target_article) in enumerate(tqdm(test_loader, desc='Testing', total=total, leave=False)):
             if mini_eval != 0 and i > mini_eval:
                 break
-            anchor, target_article = anchor.to(device), target_article.to(device)
+            anchor, target_article = anchor.to(model.device), target_article.to(model.device)
             # distance_to_target = (anchor - target_article) @ A @ (anchor - target_article).T
             distance_to_target = model.d_func(anchor, target_article, A)
             # distances = np.array([])
@@ -295,16 +295,16 @@ def compute_topk_accuracy(model: nn.Module,
 if __name__ == '__main__':
     DATASET = np.array(pd.read_pickle('transformed_dataset_length5000_contextsize300.pkl'))
 
+    # Define the device
+    # MPS is only faster for very large tensors/batch sizes
+    # device = torch.device('mps' if torch.backends.mps.is_available() else 'cuda' if torch.cuda.is_available() else 'cpu') 
+    device = torch.device('cpu')
+
     # Set the seed
     SEED = 2 # 3
     random.seed(SEED)
     np.random.seed(SEED)
     torch.manual_seed(SEED)
-
-    # Define the device
-    # MPS is only faster for very large tensors/batch sizes
-    # device = torch.device('mps' if torch.backends.mps.is_available() else 'cuda' if torch.cuda.is_available() else 'cpu') 
-    device = torch.device('cpu')
 
     # Define variables
     num_features = 384
