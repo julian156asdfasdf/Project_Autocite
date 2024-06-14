@@ -15,13 +15,15 @@ from typing import Any, Callable
 
 # Define the dataset
 class arXivDataset(Dataset):
-    def __init__(self, dataset, train=True):
+    def __init__(self, dataset, train=True, device=torch.device('cpu')):
         self.is_train = train
         self.dataset = dataset
+        self.device = device
 
-        # if self.is_train:
-        self.contexts = dataset[:, 0]
-        self.articles = dataset[:, 1]
+        self.contexts = torch.tensor(dataset[:, 0], device=self.device)
+        self.articles = torch.tensor(dataset[:, 1], device=self.device)
+        # self.contexts = dataset[:, 0]
+        # self.articles = dataset[:, 1]
         self.indexes = np.arange(len(self.dataset))
 
     def __len__(self):
@@ -31,6 +33,7 @@ class arXivDataset(Dataset):
         anchor = self.contexts[idx]
         target_article = self.articles[idx]
 
+        # If training, sample a positive and negative article, otherwise return the target article
         if self.is_train:
             positive_list = np.unique(np.where(self.articles == self.articles[idx])[0])
             negative_list = np.array([idx for idx in self.indexes if idx not in positive_list])
@@ -50,14 +53,17 @@ class Distance:
     """
     The possible distance functions to train
     """
+    @torch.jit.script
     def weighted_squared_euclidean(anchor: torch.Tensor, abstract: torch.Tensor, A: torch.Tensor):
         dist = torch.diag((anchor-abstract) @ A @ (anchor-abstract).T)    
         return dist
     
+    @torch.jit.script
     def weighted_euclidean(anchor: torch.Tensor, abstract: torch.Tensor, A: torch.Tensor):
         dist = torch.sqrt(torch.diag((anchor-abstract) @ A @ (anchor-abstract).T))   
         return dist
     
+    @torch.jit.script
     def weighted_manhatten(anchor: torch.Tensor, abstract: torch.Tensor, A: torch.Tensor):
         return torch.sum(torch.abs(anchor - abstract) @ A, dim=1)
 
@@ -91,13 +97,12 @@ class TripletModel(nn.Module):
     def __init__(self, num_features, alpha, d_func, device=torch.device('cpu')):
         super(TripletModel, self).__init__()
         self.device = device
-        self.W = nn.Parameter(torch.zeros(num_features)) # torch.randn(num_features)
-        self.alpha = torch.tensor(alpha)
+        self.W = nn.Parameter(torch.zeros(num_features, device=self.device)) # torch.randn(num_features)
+        self.alpha = torch.tensor(alpha, device=self.device)
         self.d_func = d_func
 
     def forward(self, anchor: torch.Tensor, positive: torch.Tensor, negative: torch.Tensor) -> torch.Tensor:
         A = torch.diag(torch.exp(self.W))
-        A = A.to(self.device)
 
         # D_pos = torch.empty(64)
         # D_neg = torch.empty(64)
@@ -120,6 +125,7 @@ class TripletModel(nn.Module):
 def train_model(model: nn.Module, 
                 criterion: nn.Module, 
                 optimizer: optim.Optimizer, 
+                lr_scheduler: optim.lr_scheduler,
                 train_loader: DataLoader, 
                 num_epochs: int=10, 
                 print_loss: bool=True, 
@@ -134,6 +140,7 @@ def train_model(model: nn.Module,
         model: A PyTorch model.
         criterion: A PyTorch loss function.
         optimizer: A PyTorch optimizer.
+        lr_scheduler: A PyTorch learning rate scheduler.
         train_loader: A PyTorch DataLoader.
         num_epochs: An integer specifying the number of epochs.
         print_loss: A boolean specifying whether to print the training loss.
@@ -146,7 +153,6 @@ def train_model(model: nn.Module,
         None
 
     """
-
     model.train()
     running_train_loss = np.array([])
     running_topk_accuracy = np.array([])
@@ -155,30 +161,36 @@ def train_model(model: nn.Module,
 
     for epoch in range(num_epochs):
         epoch_train_loss = np.array([])
+    
         for i, (anchor, positive, negative) in enumerate(tqdm(train_loader, desc='Training', leave=False)):
-            anchor, positive, negative = anchor.to(model.device), positive.to(model.device), negative.to(model.device)
+            # anchor, positive, negative = anchor.to(model.device), positive.to(model.device), negative.to(model.device)
 
             # Forward pass
             # outputs = model(anchor, positive, negative)
+            
             loss = criterion(anchor, positive, negative, model.W, model.alpha, model.d_func)
 
             # Backward pass and optimization
             if loss.item() > 0:
-                optimizer.zero_grad()
+                # optimizer.zero_grad()
+                optimizer.zero_grad(set_to_none=True)
                 loss.backward()
                 optimizer.step()
 
             epoch_train_loss = np.append(epoch_train_loss, loss.item())
             running_train_loss = np.append(running_train_loss, loss.item())
 
+        # Update the learning rate
+        lr_scheduler.step(epoch_train_loss.mean())
+
         if print_loss:
-            print(f'Epoch {epoch+1}/{num_epochs}, Epoch Loss: {epoch_train_loss.mean()}, Running Training Loss: {running_train_loss.mean()}')
+            print(f'Epoch {epoch+1}/{num_epochs}, Epoch Loss: {epoch_train_loss.mean()}, Running Training Loss: {running_train_loss.mean()}, LR: {optimizer.state_dict()["param_groups"][0]["lr"]}')
         
         if save_model:
             torch.save(model.state_dict(), 'triplet_model.pth')
 
         if eval_every is not None and eval_every > 0 and (epoch+1) % eval_every == 0:
-            accuracy = compute_topk_accuracy(model, np.unique(DATASET[:,1], axis=0), test_loader, top_k, mini_eval=200, print_testing_time=True)
+            accuracy = compute_topk_accuracy(model, torch.tensor(np.unique(DATASET[:,1], axis=0), device=model.device), test_loader, top_k, mini_eval=0, print_testing_time=True)
             running_topk_accuracy = np.append(running_topk_accuracy, accuracy)
             print(37*'-')
             print(f'Top-{top_k} Accuracy: {accuracy}')
@@ -209,11 +221,13 @@ def train_model(model: nn.Module,
         plt.title(f'Top-{top_k} Accuracy')
         plot_text = f'Number of epochs: {num_epochs}\nOptimizer: Adam\nLearning rate: {lr}\nTraining size: {train_size}\nLoss function: Triplet Loss\nTime: {time.strftime("%H:%M:%S", time.gmtime(end_time - start_time))}'
         props = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
-        ax.text(0.45, 0.95, plot_text, transform=ax.transAxes, fontsize=14,
+        ax.text(0.45, 0.40, plot_text, transform=ax.transAxes, fontsize=14,
         verticalalignment='top', bbox=props)
         os.makedirs('Plots', exist_ok=True)
         plt.savefig(f'Plots/top_{top_k}_accuracy_{time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime())}.png')
         plt.show()
+
+    return None
 
 # Evaluation loop
 def compute_topk_accuracy(model: nn.Module, 
@@ -247,8 +261,8 @@ def compute_topk_accuracy(model: nn.Module,
         print(f'Starting testing at {time.strftime("%H:%M:%S", time.localtime(start_time))}...')
 
     A = torch.diag(torch.exp(model.W))
-    # A = A.to(model.device)
 
+    # If mini_eval is not 0, only evaluate the model on a subset of the test set
     if mini_eval != 0:
         total = mini_eval
     else:
@@ -258,32 +272,24 @@ def compute_topk_accuracy(model: nn.Module,
         for i, (anchor, target_article) in enumerate(tqdm(test_loader, desc='Testing', total=total, leave=False)):
             if mini_eval != 0 and i > mini_eval:
                 break
-            anchor, target_article = anchor.to(model.device), target_article.to(model.device)
-            # distance_to_target = (anchor - target_article) @ A @ (anchor - target_article).T
+            # anchor, target_article = anchor.to(model.device), target_article.to(model.device)
             distance_to_target = model.d_func(anchor, target_article, A)
-            # distances = np.array([])
             closer_dist_counter = 0
 
             for article in targets:
-                article = torch.from_numpy(article).to(model.device) #.unsqueeze(0)
+                # article = torch.from_numpy(article).to(model.device) #.unsqueeze(0)
 
-                # Compute distances to all possible articles, and check if the distance to the target article is smaller
-                # D = (anchor - article) @ A @ (anchor - article).T
+                # Compute the distance between the anchor and the article, and check if it's closer than the target article
                 D = model.d_func(anchor, article, A)
                 if D < distance_to_target:
                     closer_dist_counter += 1
                 if closer_dist_counter >= k:
                     break
 
-                # distances = np.append(distances, D.item())
             # If the target article is among the k closest articles, increment the top-k accuracy
             if closer_dist_counter < k:
                 topk_accuracy += 1
-            # Get the top k articles
-            # topk = np.argsort(distances)[:k]
 
-            # if i + len(train_loader) * train_loader.batch_size in topk:
-            #     topk_accuracy += 1
     model.train()
 
     if print_testing_time:
@@ -293,7 +299,9 @@ def compute_topk_accuracy(model: nn.Module,
     return topk_accuracy / len(test_loader)  
 
 if __name__ == '__main__':
-    DATASET = np.array(pd.read_pickle('transformed_dataset_length5000_contextsize300.pkl'))
+    # DATASET = np.array(pd.read_pickle('Transformed_datasets_minilm/transformed_dataset_length5000_contextsize500.pkl'))
+    # DATASET = np.array(pd.read_pickle('Transformed_datasets_snowflake/transformed_dataset_snowflake_len5000_context1000.pkl'))
+    DATASET = np.array(pd.read_pickle('Transformed_datasets_snowflake/transformed_dataset_snowflake.pkl'))
 
     # Define the device
     # MPS is only faster for very large tensors/batch sizes
@@ -307,25 +315,36 @@ if __name__ == '__main__':
     torch.manual_seed(SEED)
 
     # Define variables
-    num_features = 384
+    num_features = 768
     batch_size = 64
-    num_epochs = 10
-    lr = 5e-3
-    margin = 0.2
+    num_workers = 3
+    pin_memory = True if device.type == 'cuda' else False
+    num_epochs = 50
+    lr = 1e-1
+    margin = 0.6
     top_k = 20
     train_size = int(len(DATASET) * 0.9)
     
     # Split the dataset into a training and test set, and create DataLoaders
     train_set = arXivDataset(DATASET[:train_size],
-                            train=True)
-    train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True) # drop_last=True
+                            train=True, 
+                            device=device)
+    train_loader = DataLoader(train_set, 
+                              batch_size=batch_size, 
+                              shuffle=True, 
+                              num_workers=num_workers, 
+                              pin_memory=pin_memory) # drop_last=True
 
     test_set = arXivDataset(DATASET[train_size:], 
-                            train=False)
-    test_loader = DataLoader(test_set, batch_size=1, shuffle=False) # Batch size must be 1 for top-k accuracy
+                            train=False, 
+                            device=device)
+    test_loader = DataLoader(test_set, 
+                             batch_size=1, 
+                             shuffle=False,
+                             num_workers=num_workers if len(DATASET) > 10000 else 0) # Batch size must be 1 for top-k accuracy
 
-    # Create instances of the model, loss function and optimizer
-    model = TripletModel(num_features, alpha=margin, d_func=Distance.weighted_squared_euclidean).to(device)
+    # Create instances of the model, loss function, optimizer and learning rate scheduler
+    model = TripletModel(num_features, alpha=margin, d_func=Distance.weighted_squared_euclidean, device=device).to(device)
     # model.load_state_dict(torch.load('triplet_model.pth')) # Load the model
     # model = torch.jit.script(model) # Using TorchScript for performance
 
@@ -338,18 +357,36 @@ if __name__ == '__main__':
     # optimizer = optim.SGD(model.parameters(), lr=lr)
     optimizer = optim.Adam(model.parameters(), lr=lr)  
 
+    lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.1, patience=5)
+
+    accuracy = compute_topk_accuracy(model, 
+                                     torch.tensor(np.unique(DATASET[:,1], axis=0), device=model.device), 
+                                     test_loader, 
+                                     top_k, 
+                                     mini_eval=0, 
+                                     print_testing_time=True)
+    print(37*'-')
+    print(f'Top-{top_k} Accuracy Before Training: {accuracy}')
+    print(37*'-')
+
     # Train the model
     train_model(model, 
                 criterion, 
                 optimizer, 
+                lr_scheduler, 
                 train_loader, 
                 num_epochs=num_epochs, 
                 print_loss=True,
                 save_model=False,
-                eval_every=2, 
+                eval_every=5, 
                 plot_loss=True,
                 plot_eval=True)
 
     # Evaluate the model
-    # accuracy = compute_topk_accuracy(model, criterion, DATASET, test_loader, top_k)
+    # accuracy = compute_topk_accuracy(model, 
+    #                                  torch.tensor(np.unique(DATASET[:,1], axis=0), device=model.device), 
+    #                                  test_loader, 
+    #                                  top_k, 
+    #                                  mini_eval=200, 
+    #                                  print_testing_time=True)
     # print(f'Top-{top_k} Accuracy: {accuracy}')
