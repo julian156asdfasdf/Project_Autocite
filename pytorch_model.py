@@ -10,6 +10,7 @@ import torch.optim as optim
 from torch.utils.data import DataLoader, Dataset
 from tqdm.auto import tqdm
 from typing import Any, Callable
+import pickle
 
 ##### TRIPLET LOSS PYTORCH MODEL #####
 
@@ -127,7 +128,7 @@ def train_model(model: nn.Module,
                 optimizer: optim.Optimizer, 
                 lr_scheduler: optim.lr_scheduler,
                 train_loader: DataLoader, 
-                num_epochs: int=10, 
+                max_epochs: int=10, 
                 print_loss: bool=True, 
                 save_model: bool=False,
                 eval_every: int | None=None,
@@ -142,7 +143,7 @@ def train_model(model: nn.Module,
         optimizer: A PyTorch optimizer.
         lr_scheduler: A PyTorch learning rate scheduler.
         train_loader: A PyTorch DataLoader.
-        num_epochs: An integer specifying the number of epochs.
+        max_epochs: An integer specifying the number of epochs.
         print_loss: A boolean specifying whether to print the training loss.
         save_model: A boolean specifying whether to save the model.
         eval_every: An integer specifying the number of epochs between evaluations. If None, no evaluations are done.
@@ -153,13 +154,44 @@ def train_model(model: nn.Module,
         None
 
     """
+    time_file_save = time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime())
     model.train()
-    running_train_loss = np.array([])
-    running_topk_accuracy = np.array([])
+    if load_model:
+        model.load_state_dict(torch.load(f'Training_Variables/triplet_model_validationlabels_{old_time_file_save}.pth'))
+        epoch_train_losses = pickle.load(open(f'Training_Variables/epoch_losses_validationlabels_{old_time_file_save}.pkl', 'rb'))
+        running_topk_accuracy = pickle.load(open(f'Training_Variables/running_topk_accuracy_validationlabels_{old_time_file_save}.pkl', 'rb'))
+        running_weights = pickle.load(open(f'Training_Variables/running_weights_validationlabels_{old_time_file_save}.pkl', 'rb'))
+        epoch = running_weights[-1][0]
+        if epoch >= max_epochs-1:
+            print(f'Training already finished.')
+            return None
+    else:
+        epoch_train_losses = []
+        running_topk_accuracy = []
+        running_weights = [] # running weights of the model
+        epoch = -1
+        if epoch >= max_epochs-1:
+            print(f'Training already finished.')
+            return None
+        running_weights.append([epoch+1, list(model.W.detach().numpy())]) # Update the running weights with the initial weights
     start_time = time.time()
-    print(f'Starting training for {num_epochs} epochs at {time.strftime("%H:%M:%S", time.localtime(start_time))}...')
+    print(f'Starting training for {max_epochs} epochs at {time.strftime("%H:%M:%S", time.localtime(start_time))}...')
+    accuracy = compute_topk_accuracy(model, 
+                                     torch.tensor(np.unique(np.asarray(test_set).T[:,1].T, axis=0), device=model.device), # torch.tensor(np.unique(DATASET[:,1], axis=0), device=model.device)
+                                     test_loader, 
+                                     top_k, 
+                                     mini_eval=0, 
+                                     print_testing_time=True)
+    running_topk_accuracy.append([epoch+(1 if epoch == -1 else 0), accuracy])
+    with open(f'Training_Variables/running_topk_accuracy_validationlabels_{time_file_save}.pkl', 'wb') as f:
+        pickle.dump(running_topk_accuracy, f)
+    print(37*'-')
+    print(f'Top-{top_k} Accuracy Before Training: {accuracy}')
+    print(37*'-')
 
-    for epoch in range(num_epochs):
+    for epoch in range(epoch+(0 if load_model else 1),max_epochs):
+        if optimizer.param_groups[0]['lr'] <= 1e-5:
+            break
         epoch_train_loss = np.array([])
     
         for i, (anchor, positive, negative) in enumerate(tqdm(train_loader, desc='Training', leave=False)):
@@ -178,20 +210,30 @@ def train_model(model: nn.Module,
                 optimizer.step()
 
             epoch_train_loss = np.append(epoch_train_loss, loss.item())
-            running_train_loss = np.append(running_train_loss, loss.item())
+            epoch_train_losses.append([epoch*len(train_loader)+i+1, loss.item()])
+            pass
+        running_weights.append([epoch+1, list(model.W.detach().numpy())])
+        # Save the running weights and epoch losses
+        with open(f'Training_Variables/running_weights_validationlabels_{time_file_save}.pkl', 'wb') as f:
+            pickle.dump(running_weights, f)
+        with open(f'Training_Variables/epoch_losses_validationlabels_{time_file_save}.pkl', 'wb') as f:
+            pickle.dump(epoch_train_losses, f)
 
         # Update the learning rate
         lr_scheduler.step(epoch_train_loss.mean())
 
         if print_loss:
-            print(f'Epoch {epoch+1}/{num_epochs}, Epoch Loss: {epoch_train_loss.mean()}, Running Training Loss: {running_train_loss.mean()}, LR: {optimizer.state_dict()["param_groups"][0]["lr"]}')
+            print(f'Epoch {epoch+1}/{max_epochs}, Epoch Loss: {epoch_train_loss.mean()}, LR: {optimizer.state_dict()["param_groups"][0]["lr"]}')
         
         if save_model:
-            torch.save(model.state_dict(), 'triplet_model.pth')
+            torch.save(model.state_dict(), f'Training_Variables/triplet_model_validationlabels_{time_file_save}.pth')
 
         if eval_every is not None and eval_every > 0 and (epoch+1) % eval_every == 0:
-            accuracy = compute_topk_accuracy(model, torch.tensor(np.unique(DATASET[:,1], axis=0), device=model.device), test_loader, top_k, mini_eval=0, print_testing_time=True)
-            running_topk_accuracy = np.append(running_topk_accuracy, accuracy)
+            #  torch.tensor(np.unique(DATASET[:,1], axis=0), device=model.device)
+            accuracy = compute_topk_accuracy(model, torch.tensor(np.unique(np.asarray(test_set).T[:,1].T, axis=0), device=model.device), test_loader, top_k, mini_eval=0, print_testing_time=True)
+            running_topk_accuracy.append([epoch+1, accuracy])
+            with open(f'Training_Variables/running_topk_accuracy_validationlabels_{time_file_save}.pkl', 'wb') as f:
+                pickle.dump(running_topk_accuracy, f)
             print(37*'-')
             print(f'Top-{top_k} Accuracy: {accuracy}')
             print(37*'-')
@@ -201,16 +243,16 @@ def train_model(model: nn.Module,
 
     if plot_loss:
         fig, ax = plt.subplots()
-        plt.plot(running_train_loss)
+        plt.plot(epoch_train_losses[:,1])
         plt.xlabel('Iterations')
         plt.ylabel('Loss')
         plt.title('Training Loss')
-        plot_text = f'Number of epochs: {num_epochs}\nOptimizer: Adam\nLearning rate: {lr}\nTraining size: {train_size}\nLoss function: Triplet Loss\nTime: {time.strftime("%H:%M:%S", time.gmtime(end_time - start_time))}'
+        plot_text = f'Number of epochs: {max_epochs}\nOptimizer: Adam\nLearning rate: {lr}\nTraining size: {train_size}\nLoss function: Triplet Loss\nTime: {time.strftime("%H:%M:%S", time.gmtime(end_time - start_time))}'
         props = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
         ax.text(0.45, 0.95, plot_text, transform=ax.transAxes, fontsize=14,
         verticalalignment='top', bbox=props)
         os.makedirs('Plots', exist_ok=True)
-        plt.savefig(f'Plots/triplet_loss_training_{time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime())}.png')
+        plt.savefig(f'Plots/triplet_loss_training_validationlabels_{time_file_save}.png')
         plt.show()
     
     if plot_eval:
@@ -219,12 +261,12 @@ def train_model(model: nn.Module,
         plt.xlabel('Epochs (x5)')
         plt.ylabel('Top-k Accuracy')
         plt.title(f'Top-{top_k} Accuracy')
-        plot_text = f'Number of epochs: {num_epochs}\nOptimizer: Adam\nLearning rate: {lr}\nTraining size: {train_size}\nLoss function: Triplet Loss\nTime: {time.strftime("%H:%M:%S", time.gmtime(end_time - start_time))}'
+        plot_text = f'Number of epochs: {max_epochs}\nOptimizer: Adam\nLearning rate: {lr}\nTraining size: {train_size}\nLoss function: Triplet Loss\nTime: {time.strftime("%H:%M:%S", time.gmtime(end_time - start_time))}'
         props = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
         ax.text(0.45, 0.40, plot_text, transform=ax.transAxes, fontsize=14,
         verticalalignment='top', bbox=props)
         os.makedirs('Plots', exist_ok=True)
-        plt.savefig(f'Plots/top_{top_k}_accuracy_{time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime())}.png')
+        plt.savefig(f'Plots/top_{top_k}_accuracy_validationlabels_{time_file_save}.png')
         plt.show()
 
     return None
@@ -301,7 +343,7 @@ def compute_topk_accuracy(model: nn.Module,
 if __name__ == '__main__':
     # DATASET = np.array(pd.read_pickle('Transformed_datasets_minilm/transformed_dataset_length5000_contextsize500.pkl'))
     # DATASET = np.array(pd.read_pickle('Transformed_datasets_snowflake/transformed_dataset_snowflake_len5000_context1000.pkl'))
-    DATASET = np.array(pd.read_pickle('Transformed_datasets_snowflake/transformed_dataset_snowflake.pkl'))
+    
 
     # Define the device
     # MPS is only faster for very large tensors/batch sizes
@@ -314,16 +356,21 @@ if __name__ == '__main__':
     np.random.seed(SEED)
     torch.manual_seed(SEED)
 
+    DATASET = np.array(pd.read_pickle('Transformed_datasets_snowflake/transformed_dataset_snowflake.pkl')) [:20000]
+
     # Define variables
     num_features = 768
     batch_size = 64
-    num_workers = 3
+    num_workers = 6
     pin_memory = True if device.type == 'cuda' else False
-    num_epochs = 50
-    lr = 1e-1
+    max_epochs = 50
+    lr = 1e-2 # Must be adjusted to the actual learning rate, even when loading a pretrained model where the learning rate had decayed
     margin = 0.6
     top_k = 20
     train_size = int(len(DATASET) * 0.9)
+    load_model = True
+    if load_model:
+        old_time_file_save = '2024-06-14_23-25-37'
     
     # Split the dataset into a training and test set, and create DataLoaders
     train_set = arXivDataset(DATASET[:train_size],
@@ -341,7 +388,7 @@ if __name__ == '__main__':
     test_loader = DataLoader(test_set, 
                              batch_size=1, 
                              shuffle=False,
-                             num_workers=num_workers if len(DATASET) > 10000 else 0) # Batch size must be 1 for top-k accuracy
+                             num_workers=0) # Batch size must be 1 for top-k accuracy
 
     # Create instances of the model, loss function, optimizer and learning rate scheduler
     model = TripletModel(num_features, alpha=margin, d_func=Distance.weighted_squared_euclidean, device=device).to(device)
@@ -357,17 +404,7 @@ if __name__ == '__main__':
     # optimizer = optim.SGD(model.parameters(), lr=lr)
     optimizer = optim.Adam(model.parameters(), lr=lr)  
 
-    lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.1, patience=5)
-
-    accuracy = compute_topk_accuracy(model, 
-                                     torch.tensor(np.unique(DATASET[:,1], axis=0), device=model.device), 
-                                     test_loader, 
-                                     top_k, 
-                                     mini_eval=0, 
-                                     print_testing_time=True)
-    print(37*'-')
-    print(f'Top-{top_k} Accuracy Before Training: {accuracy}')
-    print(37*'-')
+    lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.1, patience=3)
 
     # Train the model
     train_model(model, 
@@ -375,10 +412,10 @@ if __name__ == '__main__':
                 optimizer, 
                 lr_scheduler, 
                 train_loader, 
-                num_epochs=num_epochs, 
+                max_epochs=max_epochs, 
                 print_loss=True,
-                save_model=False,
-                eval_every=5, 
+                save_model=True,
+                eval_every=1, 
                 plot_loss=True,
                 plot_eval=True)
 
