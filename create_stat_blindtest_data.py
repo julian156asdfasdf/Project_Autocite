@@ -1,4 +1,5 @@
-# Run only once !!!!!!
+# Run this to get the top-5 arXiv-IDs for the 30 contexts in the blind test for each of the models
+# Requires the dataset file to be created with the snowflake embedder and in the stated subdirectory.
 
 
 import pickle
@@ -11,6 +12,7 @@ from tqdm.auto import tqdm
 
 # Import the necessary functions and classes
 from pytorch_model import arXivDataset, Distance, TripletLoss, TripletModel, compute_topk_accuracy
+from baselines import PopularityModel
 
 if __name__ == '__main__':
 
@@ -158,3 +160,9 @@ if __name__ == '__main__':
     
     # Save the result table
     pickle.dump(result_table, open(f"result_table_stat_test.pkl", "wb"))
+
+    # Return top 5 arXiv-IDS for the popularity model
+    print(f"Popularity model top-{top_k} suggestions:")
+    popularity_model = PopularityModel(DATASET[:train_size], top_k)
+    for transformed_arXivID in popularity_model.return_arxiv_ids().keys():
+        print(reversed_mapping_dict[transformed_arXivID])

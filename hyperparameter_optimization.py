@@ -97,8 +97,13 @@ def objective(trial):
         running_weights[trial.number, :, epoch+1] = model.W.detach().numpy()
 
         # Validation of the model.
-        targets = np.unique(np.asarray(test_set).T[:,1].T, axis=0)
-        # targets = np.unique(dataset[:,1], axis=0)
+        if target_data == "Validation":
+            targets = torch.tensor(np.unique(np.asarray(test_set).T[:,1].T, axis=0), device=model.device)
+        elif target_data == "Train":
+            targets = torch.tensor(np.unique(dataset[:train_size,1], axis=0), device=model.device) # Er ikke testet !!!!!
+        else:
+            targets = torch.tensor(np.unique(dataset[:,1], axis=0), device=model.device)
+
         accuracy = compute_topk_accuracy(model, targets, test_loader, top_k, mini_eval=mini_eval, print_testing_time=False)
         trial.report(accuracy, epoch)
 
@@ -173,19 +178,20 @@ if __name__ == "__main__":
     dataset_size = 5000
     batch_size = 64
     num_epochs = 20
-    top_k = 20
-    lr = 0.01
-    mini_eval = 0
+    top_k = 20 # Try changing to 5, 10
+    lr = 0.01 # Try starting at 0.1 and changing to 0.01 and then later again to 0.001 and possible to 0.0001
+    mini_eval = 0 # 0 means no mini evaluation, every other number means the number of batches to evaluate on.
     num_workers_train = 6
     num_workers_test = 0
+    target_data = "All" # Choose from "Validation", "Train", "All"
 
     # Hyperparameter optimization variables
     context_sizes = [50,100,200,300,400,500,600,700,800,900,1000]
     alpha_bound = [0.05, 1.5]
     distance_measures = ["weighted_squared_euclidean", "weighted_euclidean", "weighted_manhatten"] #, "weighted_cosine"]
-    study_name = "Autocite_Hyperparam_Optim_Snowflake_AccOnTestOnly"
+    study_name = "Autocite_Hyperparam_Optim_Snowflake_AccOnTrainOnly"
     storage = "sqlite:///Autocite.db"
-    continue_existing = False # Set to True if you want to continue an existing study with the same name and stored at the same location.
+    continue_existing = True # Set to True if you want to continue an existing study with the same name and stored at the same location.
     n_trials = 40
 
     # Choose the vector embedding model
