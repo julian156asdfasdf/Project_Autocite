@@ -98,7 +98,8 @@ class TripletModel(nn.Module):
     def __init__(self, num_features, alpha, d_func, device=torch.device('cpu')):
         super(TripletModel, self).__init__()
         self.device = device
-        self.W = nn.Parameter(torch.zeros(num_features, device=self.device)) # torch.randn(num_features)
+        # self.W = nn.Parameter(torch.zeros(num_features, device=self.device)) # torch.randn(num_features)
+        self.W = nn.Parameter(torch.randn(num_features, device=self.device)*100)
         self.alpha = torch.tensor(alpha, device=self.device)
         self.d_func = d_func
 
@@ -157,10 +158,10 @@ def train_model(model: nn.Module,
     time_file_save = time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime())
     model.train()
     if load_model:
-        model.load_state_dict(torch.load(f'Training_Variables/triplet_model_validationlabels_{old_time_file_save}.pth'))
-        epoch_train_losses = pickle.load(open(f'Training_Variables/epoch_losses_validationlabels_{old_time_file_save}.pkl', 'rb'))
-        running_topk_accuracy = pickle.load(open(f'Training_Variables/running_topk_accuracy_validationlabels_{old_time_file_save}.pkl', 'rb'))
-        running_weights = pickle.load(open(f'Training_Variables/running_weights_validationlabels_{old_time_file_save}.pkl', 'rb'))
+        model.load_state_dict(torch.load(f'Training_Variables/triplet_model_{old_time_file_save}.pth'))
+        epoch_train_losses = pickle.load(open(f'Training_Variables/epoch_losses_{old_time_file_save}.pkl', 'rb'))
+        running_topk_accuracy = pickle.load(open(f'Training_Variables/running_topk_accuracy_{old_time_file_save}.pkl', 'rb'))
+        running_weights = pickle.load(open(f'Training_Variables/running_weights_{old_time_file_save}.pkl', 'rb'))
         epoch = running_weights[-1][0]
         if epoch >= max_epochs-1:
             print(f'Training already finished.')
@@ -177,7 +178,7 @@ def train_model(model: nn.Module,
     start_time = time.time()
     print(f'Starting training for {max_epochs} epochs at {time.strftime("%H:%M:%S", time.localtime(start_time))}...')
     accuracy = compute_topk_accuracy(model, 
-                                     torch.tensor(np.unique(np.asarray(test_set).T[:,1].T, axis=0), device=model.device), # torch.tensor(np.unique(DATASET[:,1], axis=0), device=model.device)
+                                     torch.tensor(np.unique(DATASET[:,1], axis=0), device=model.device), # torch.tensor(np.unique(DATASET[:,1], axis=0), device=model.device)
                                      test_loader, 
                                      top_k, 
                                      mini_eval=0, 
@@ -368,9 +369,9 @@ if __name__ == '__main__':
     margin = 0.6
     top_k = 20
     train_size = int(len(DATASET) * 0.9)
-    load_model = True
+    load_model = False
     if load_model:
-        old_time_file_save = '2024-06-14_23-25-37'
+        old_time_file_save = '2024-06-15_12-59-14'
     
     # Split the dataset into a training and test set, and create DataLoaders
     train_set = arXivDataset(DATASET[:train_size],
