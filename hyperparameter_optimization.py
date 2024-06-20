@@ -189,7 +189,7 @@ if __name__ == "__main__":
     context_sizes = [50,100,200,300,400,500,600,700,800,900,1000]
     alpha_bound = [0.05, 1.5]
     distance_measures = ["weighted_squared_euclidean", "weighted_euclidean", "weighted_manhatten"] #, "weighted_cosine"]
-    study_name = "Autocite_Hyperparam_Optim_Snowflake_AccOnTrainOnly"
+    study_name = "Autocite_Hyperparam_Optim_Snowflake"
     storage = "sqlite:///Autocite.db"
     continue_existing = True # Set to True if you want to continue an existing study with the same name and stored at the same location.
     n_trials = 40
