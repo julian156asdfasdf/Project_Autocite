@@ -12,7 +12,7 @@ def get_abstract_from_arxiv_id(arxiv_id: str) -> str:
     """
     return ARXIVID_TO_ABSTRACT[arxiv_id]
 
-def transform_dataset(dataset: list, transformer: str="Snowflake/snowflake-arctic-embed-m"
+def transform_dataset(dataset: list, transformer: str="sentence-transformers/all-MiniLM-L6-v2"
 ) -> list | None:
     """
     Takes the dataset in the form:
@@ -58,17 +58,17 @@ def upload_dataset(transformed_dataset: str, filepath: str) -> str:
 
 if __name__ == '__main__':
     # Load the dataset
-    dataset = download_dataset('dataset.pkl')[:5000]
+    dataset = download_dataset('dataset.pkl')
     if not dataset:
         exit()
-    context_sizes = [300]
+    context_sizes = [1000]
     for context_size in context_sizes:
         dataset_short_context = [[datapoint[0], datapoint[1], datapoint[2][:context_size]] for datapoint in dataset]
         transformed_dataset_short_context = transform_dataset(dataset_short_context)
         if not transformed_dataset_short_context:
             exit()
-        upload_dataset(dataset_short_context, f'dataset_length5000_contextsize{context_size}.pkl')
-        upload_dataset(transformed_dataset_short_context, f'transformed_dataset_length5000_contextsize{context_size}.pkl')
+        upload_dataset(dataset_short_context, f'dataset_context{context_size}.pkl')
+        upload_dataset(transformed_dataset_short_context, f'transformed_dataset_MiniLM_context{context_size}.pkl')
     #transformed_dataset = transform_dataset(dataset)
     #if not transformed_dataset:
     #    exit()
