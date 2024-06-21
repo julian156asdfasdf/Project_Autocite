@@ -36,7 +36,9 @@ def objective(trial):
     """
 
     # Load the dataset with the context size hyperparameter
-    context_size = trial.suggest_int("context_size", 40, 810)
+    
+    context_size_idx = trial.suggest_int("context_size_idx", 0, len(context_sizes)-1)
+    context_size = context_sizes[context_size_idx]
     
     path = transformed_dataset_filename_base[:-4] + str(context_size) + transformed_dataset_filename_base[-4:]
     dataset = np.array(pd.read_pickle(path))[:dataset_size]
@@ -60,9 +62,9 @@ def objective(trial):
 
     # Initialize the data loaders
     train_set = arXivDataset(dataset[:train_size], train=True)
-    train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True) # drop_last=True
+    train_loader = DataLoader(train_set, batch_size=batch_size, num_workers=num_workers_train, shuffle=True) # drop_last=True
     test_set = arXivDataset(dataset[train_size:], train=False)
-    test_loader = DataLoader(test_set, batch_size=1, shuffle=False) # Batch size must be 1 for top-k accuracy
+    test_loader = DataLoader(test_set, batch_size=1, num_workers=num_workers_test, shuffle=False) # Batch size must be 1 for top-k accuracy
 
     # Update the running weights with the initial weights
     running_weights[trial.number, :, 0] = model.W.detach().numpy()
@@ -95,8 +97,13 @@ def objective(trial):
         running_weights[trial.number, :, epoch+1] = model.W.detach().numpy()
 
         # Validation of the model.
-        targets = np.unique(np.asarray(test_set).T[:,1].T, axis=0)
-        # targets = np.unique(dataset[:,1], axis=0)
+        if target_data == "Validation":
+            targets = torch.tensor(np.unique(np.asarray(test_set).T[:,1].T, axis=0), device=model.device)
+        elif target_data == "Train":
+            targets = torch.tensor(np.unique(dataset[:train_size,1], axis=0), device=model.device) # Er ikke testet !!!!!
+        else:
+            targets = torch.tensor(np.unique(dataset[:,1], axis=0), device=model.device)
+
         accuracy = compute_topk_accuracy(model, targets, test_loader, top_k, mini_eval=mini_eval, print_testing_time=False)
         trial.report(accuracy, epoch)
 
@@ -132,7 +139,7 @@ def get_study(storage, study_name, continue_existing, search_space=None, sampler
     """
     try:
         # Check if the study exists
-        study = optuna.load_study(study_name=study_name, storage=storage, sampler=(sampler(search_space) if sampler is not None else optuna.samplers.BaseSampler()))
+        study = optuna.load_study(study_name=study_name, storage=storage, sampler=(sampler if sampler is not None else optuna.samplers.BaseSampler()))
         
         # If the study exists, delete it
         if not continue_existing:
@@ -147,7 +154,6 @@ def get_study(storage, study_name, continue_existing, search_space=None, sampler
     # Create a new study if not continuing an existing one
     if not continue_existing:
         # Create a new study
-        sampler = sampler(search_space)
         study = optuna.create_study(
             storage=storage,
             study_name=study_name,
@@ -171,30 +177,38 @@ if __name__ == "__main__":
     train_test_split = 0.9
     dataset_size = 5000
     batch_size = 64
-    num_epochs = 50
-    top_k = 20
-    lr = 0.01
-    mini_eval = 0
+    num_epochs = 20
+    top_k = 20 # Try changing to 5, 10
+    lr = 0.01 # Try starting at 0.1 and changing to 0.01 and then later again to 0.001 and possible to 0.0001
+    mini_eval = 0 # 0 means no mini evaluation, every other number means the number of batches to evaluate on.
+    num_workers_train = 6
+    num_workers_test = 0
+    target_data = "All" # Choose from "Validation", "Train", "All"
 
     # Hyperparameter optimization variables
-    study_name = "Autocite_Hyperparam_Optim_AccOnTestOnly"
+    context_sizes = [50,100,200,300,400,500,600,700,800,900,1000]
+    alpha_bound = [0.05, 1.5]
+    distance_measures = ["weighted_squared_euclidean", "weighted_euclidean", "weighted_manhatten"] #, "weighted_cosine"]
+    study_name = "Autocite_Hyperparam_Optim_Snowflake"
     storage = "sqlite:///Autocite.db"
     continue_existing = True # Set to True if you want to continue an existing study with the same name and stored at the same location.
     n_trials = 40
 
-    transformed_dataset_filename_base = "transformed_dataset_length5000_contextsize.pkl"
+    # Choose the vector embedding model
+    vector_embedding_model = 'Snowflake' # Choose from 'Snowflake', 'MiniLM'
+
+    if vector_embedding_model == 'Snowflake':
+        transformed_dataset_filename_base = "Transformed_datasets_snowflake/transformed_dataset_snowflake_len5000_context.pkl"
+    elif vector_embedding_model == 'MiniLM':
+        transformed_dataset_filename_base = "Transformed_datasets_minilm/transformed_dataset_length5000_contextsize.pkl"
+    else:
+        raise ValueError("Invalid vector_embedding_model. Choose from 'Snowflake', 'MiniLM'.")
 
     # Initialize the running weights
     with open(transformed_dataset_filename_base[:-4] + str(1000) + transformed_dataset_filename_base[-4:], 'rb') as f:
         running_weights = np.zeros((n_trials, np.asarray(pickle.load(f)).shape[2], num_epochs+1))
     
-    # Define the search space for the hyperparameters
-    search_space = {'context_size':[50,100,200,300,400,500,600,700,800,1000], 
-                    'alpha':list(np.arange(1,31)/20),
-                    'distance_measure':["weighted_squared_euclidean", "weighted_euclidean", "weighted_manhatten"]
-                }
-    # Load or Create a optuna study
-    study = get_study(storage, study_name, continue_existing, search_space=search_space, sampler=optuna.samplers.GridSampler)
+    study = get_study(storage, study_name, continue_existing, sampler = optuna.samplers.GPSampler()) # , search_space=search_space, sampler=optuna.samplers.GridSampler
     
     # Optimize the study
     study.optimize(objective, n_trials=n_trials)
