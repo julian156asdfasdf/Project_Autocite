@@ -7,7 +7,7 @@ from scipy.special import softmax
 from thefuzz import fuzz
 import dataset_embedding
 import pandas as pd
-from scipy.spatial.distance import euclidean, cityblock
+from scipy.spatial.distance import euclidean, cityblock, sqeuclidean
 
 
 
@@ -19,7 +19,7 @@ class model_training_and_testing:
         self.weights = weights
         self.model = model
         self.dataset = dataset
-        self.split_index = 0 #int(len(self.dataset)*0.8)
+        self.split_index = int(len(self.dataset)*0.8) #*0.8
         self.lr = lr
         self.num_epochs = num_epochs
         self.topk = topk
@@ -55,7 +55,7 @@ class model_training_and_testing:
 
     def top_k_accuracy_weighted(self) -> float:
         correct = 0
-        for i in range(len(dataset[self.split_index:])):
+        for i in tqdm(range(len(dataset[self.split_index:])), desc='Top-k accuracy', leave=False):
             probs = [self.model(self.dataset[i+self.split_index][0], self.dataset[j+self.split_index][1], self.weights) for j in range(len(self.dataset[self.split_index:]))] # Guess among test points
  
             top_k_indices = np.argsort(probs)[:self.topk]
@@ -64,13 +64,25 @@ class model_training_and_testing:
         return correct / len(dataset[self.split_index:])
 
 
-
 #---
 # Defines possible distance measures, both naive ones where the weights are constant and diagonal matrices with weights
 # And filled matrices with weights, the two distance metrics used is currently Euclidean distance and Cosine distance
 #---
 
 
+# Define squared euclidean distance
+def sqeuclidean_func(x, y, weights) -> float:
+    return sqeuclidean(x, y)
+
+def squared_euclidean(model):
+    if model=="mpnet" or model=="snow":
+        weights = np.zeros(768)
+    else:
+        weights = np.zeros(384)
+    squared_euclidean = model_training_and_testing(weights=weights, dataset = dataset, model = sqeuclidean_func)
+    topk_performance = squared_euclidean.top_k_accuracy_weighted()
+    print(f'Squared Euclidean: {topk_performance}')
+    
 def diagonal_euclidean_func(x, y, weights) -> float:
         return euclidean(x, y, np.exp(weights))
 
@@ -80,7 +92,6 @@ def naive_euclidean(model):
         weights = np.zeros(768)
     else:
         weights = np.zeros(384)
-    # elif model == "":
     
     naive_euclidean = model_training_and_testing(weights=weights, dataset = dataset, model = diagonal_euclidean_func)
     topk_performance = naive_euclidean.top_k_accuracy_weighted()
@@ -154,9 +165,10 @@ def matrix_cosine():
 
 
 def main(model):
-    # naive_euclidean(model)
+    naive_euclidean(model)
     # diagonal_euclidean(model)
     # matrix_euclidean()
+    squared_euclidean(model)
 
     # naive_cosine(model)
     naive_manhattan(model)
@@ -164,12 +176,12 @@ def main(model):
     # matrix_cosine()
 
 if __name__ == "__main__":
-    dataset = pd.read_pickle('transformed_dataset_mpnet_contextsize300.pkl')[:5000]
-    print("\nmpnet: ")
-    main(model = "mpnet")
-    dataset = pd.read_pickle('transformed_dataset_MiniLM_contextsize300.pkl')[:5000]
-    print("\nMiniLM: ")
-    main(model="MiniLM")    
+    # dataset = pd.read_pickle('transformed_dataset_mpnet_contextsize300.pkl')[:5000]
+    # print("\nmpnet: ")
+    # main(model = "mpnet")
+    # dataset = pd.read_pickle('transformed_dataset_MiniLM_contextsize300.pkl')[:5000]
+    # print("\nMiniLM: ")
+    # main(model="MiniLM")    
     dataset = pd.read_pickle('transformed_dataset_snow_contextsize300.pkl')[:5000]
     print("\nsnow: ")
     main(model="snow")
