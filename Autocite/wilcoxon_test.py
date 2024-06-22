@@ -1,6 +1,5 @@
 # Wilcoxon signed-rank test
 
-import numpy as np
 from scipy.stats import wilcoxon
 
 # Example data

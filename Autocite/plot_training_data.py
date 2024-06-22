@@ -3,11 +3,12 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import pickle
+import os
 
 time_file_save = '2024-06-15_12-59-14' # Write the time_file_save from the training data to be plottet.
-epoch_losses = pickle.load(open(f'Training_Variables/epoch_losses_{time_file_save}.pkl', 'rb'))
-running_topk_accuracy = pickle.load(open(f'Training_Variables/running_topk_accuracy_{time_file_save}.pkl', 'rb'))
-running_weights = pickle.load(open(f'Training_Variables/running_weights_{time_file_save}.pkl', 'rb'))
+epoch_losses = pickle.load(open(os.path.join('Autocite','Training Data', f'epoch_losses_{time_file_save}.pkl'), 'rb'))
+running_topk_accuracy = pickle.load(open(os.path.join('Autocite','Training Data', f'running_topk_accuracy_{time_file_save}.pkl'), 'rb'))
+running_weights = pickle.load(open(os.path.join('Autocite','Training Data', f'running_weights_{time_file_save}.pkl'), 'rb'))
 
 rw_shape = (len(running_weights), len(running_weights[0]),len(running_weights[0][1]))
 rtka_shape = (len(running_topk_accuracy), len(running_topk_accuracy[0]))

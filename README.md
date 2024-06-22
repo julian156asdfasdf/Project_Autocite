@@ -7,8 +7,8 @@ This project is divided into two parts
 
 ### Description of Data Processing Pipeline
 The idea is that, first make sure that a Randomized_Kaggle_Dataset json file has to exist in the directory specified in main.py. There are a few important notes to this:
-- The first note is, that currently in the repository the file is called Randomized_Kaggle_Dataset_Subset_physics.json, which is a subset of 240.000 thousand rows in the original Kaggle Dataset.
-- If there is no such json file, then go to the following link https://www.kaggle.com/datasets/Cornell-University/arxiv and download a file called Kaggle_Dataset.json from there. After that is done, then run the python script called RandomizeKaggleDB.py. In that file, it can be specified which categories of articles should be included.
+- The first note is, that the file called Randomized_Kaggle_Dataset_Subset_physics.json is needed in the Data_Processing_Pipeline directory, which is a subset of 240.000 thousand rows in the original Kaggle Dataset.
+- If there is no such json file, then go to the following link https://www.kaggle.com/datasets/Cornell-University/arxiv and download a file called Kaggle_Dataset.json from there into the outer directory. After that is done, then run the python script called RandomizeKaggleDB.py. In that file, it can be specified which categories of articles should be included.
 
 After that, run the file called main.py from the outer directory. In this file, it is important to specify some parameters first. 
 - start_idx: This is the starting index in the Randomized_Kaggle_Dataset json file that is downloaded first.
@@ -36,9 +36,9 @@ After that is done, all succesfully mapped citations are inserted in the dataset
 
 ## Training and Evaluating Autocite
 This part should be understood in the following steps, where all files should be run from the outer directory.
-- First create a vector embedded version of the dataset.pkl file. Make sure in all following documents that the correct path is used ofr the transformed_dataset.pkl file.
+- First create a vector embedded version of the dataset.pkl file called transformed_dataset.pkl. Make sure in all following documents that the correct path is used ofr the transformed_dataset.pkl file. Running this file requires that an arXivIDs_to_Abstract.json file exists in the outer directory. This file is created using the python script called create_arXivID_to_Abstract.py.
 - Secondly, the ML model is implemented using PyTorch in the file called pytorch_model.py in the folder called Autocite. Here the model is defined, along with a loss class, an arXivDataset class and a class with the distance functions used. Further, a function for evaluating the model on a validation set is defined. Do not run this file yet.
 - Next, the above-mentioned classes and functions are used in the file called hyperparameter_optimization.py, where the Optuna library is used to find the optimal hyperparameters. Code for relevant plotting can be found in plot_hyperopt_data.py.
 - When the optimal hyperparameters are found, insert them in the pytorch_model.py script and then that script can be run to train the parameters for Autocite. All the data from training Autocite are saved in a folder called Training_Variables. Code for plotting training variables can be found in plot_training_data.py.
 - Then the baseline models are created and evaluated in the baselines.py script.
-- For performing the statistical test mentioned in the paper, run the file called create_stat_blindtest_data.py, and then check relevance between all the contexts and the corresponding abstracts and note the results in the wilcoxon_test.py, where the results achieved in the paper are already noted. Then run the wilcoxon_test.py script to get the p-value.
+- For performing the statistical test mentioned in the paper, first make sure the file called TransformedRow_to_arXivID.pkl exists in the outer directory. This file is created running the create_vectorembed_to_arXivID.py script. Afterwards run the file called create_stat_blindtest_data.py, and then check relevance between all the contexts and the corresponding abstracts and note the results in the wilcoxon_test.py, where the results achieved in the paper are already noted. Then run the wilcoxon_test.py script to get the p-value.

@@ -1,7 +1,7 @@
 # Create a dictionary that maps from transformed datapoint to arXivID (and if possible context)
-import numpy as np
 import pickle
 from tqdm.auto import tqdm
+import os
 
 # Load data
 with open('transformed_dataset.pkl', 'rb') as file:
@@ -21,4 +21,4 @@ for i in tqdm(range(len(dataset_transformed))):
     TransformedRow_to_arXivID.update({tuple(abstract_transformed) : dataset[i][1]})
 
 # Save the dictionary
-pickle.dump(TransformedRow_to_arXivID, open("TransformedRow_to_arXivID.pkl", "wb"))
+pickle.dump(TransformedRow_to_arXivID, open(os.path.join("Autocite","TransformedRow_to_arXivID.pkl"), "wb"))

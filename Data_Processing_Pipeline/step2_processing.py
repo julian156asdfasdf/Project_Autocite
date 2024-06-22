@@ -11,7 +11,7 @@ from tqdm.auto import tqdm
 
 class step2_processing:
     def __init__(self, directory, target_name):
-        self.data = Path("./"+directory)
+        self.data = directory # Path("./"+directory)
         self.target = target_name
         self.encoder = 'ISO-8859-1'
         self.manifest = defaultdict(lambda: set())
@@ -101,7 +101,7 @@ class step2_processing:
             return None, None
 
         # Create a new main file in the step_2 folder
-        new_main_file = os.path.join(Path(self.target), root, root+".txt")
+        new_main_file = os.path.join(self.target, root, root+".txt")
         
         # Iteratively input all the \input files into the main file
         while True:
@@ -266,9 +266,6 @@ class step2_processing:
             None
         """
 
-        base_folder = os.path.dirname(self.data)
-        step_2_folder = os.path.join(base_folder, self.target)
-        step_2_folder = self.target
         # Walk through directory
         for dir in tqdm(os.listdir(self.data), desc="Creating references.json files", leave=False):
             if dir == '.DS_Store':
@@ -295,7 +292,7 @@ class step2_processing:
                         parsed.update(parsebbl(bbl_str=bbl_content))
 
             ## GETTING THE REFERENCES FROM THE MAIN.TXT FILE ##
-            file_directory = os.path.join(os.path.join(step_2_folder, dir), dir+".txt")
+            file_directory = os.path.join(os.path.join(self.target, dir), dir+".txt")
             extracted_ref = self.extract_references(file_directory)
             if extracted_ref != "": # if it found some references in the .txt file, update dict
                 parsed.update(parsebbl(bbl_str=extracted_ref))
@@ -310,7 +307,7 @@ class step2_processing:
             for key in parsed.keys():
                 parsed[key] = {**{'title': None, 'ArXiV-ID': None, 'info': None, 'author_ln': None}, **parsed[key]}
             
-            destination_dir = os.path.join(step_2_folder, dir)
+            destination_dir = os.path.join(self.target, dir)
             with open(os.path.join(destination_dir, "references.json"), 'w') as f:
                 json.dump(parsed, f)
             
@@ -328,7 +325,7 @@ class step2_processing:
 
 
 if __name__ == "__main__":
-    process = step2_processing("Data_Processing_Pipeline/Step_1", "Step_2")
+    process = step2_processing(os.path.join("Data_Processing_Pipeline","Step_1"), os.path.join("Data_Processing_Pipeline","Step_2"))
     process.create_target_folder()
     process.create_main_txt()
     process.create_references_json()

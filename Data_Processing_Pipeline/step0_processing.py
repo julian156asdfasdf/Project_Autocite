@@ -12,7 +12,7 @@ import time
 import random
 
 class step0_processing:
-    def __init__(self, target_name="Step_0",start_idx=0, window_size=100, end_idx=100):
+    def __init__(self, target_name=os.path.join("Data_Processing_Pipeline","Step_0"),start_idx=0, window_size=100, end_idx=100):
         self.target = target_name
         self.tar_links = []
         self.arxiv_papers = None
@@ -107,12 +107,14 @@ class step0_processing:
                 # print(f'Progress: {self.window_size-files_left}/{self.window_size}. File: {result}')
 
 if __name__ == "__main__":    
+    import sys
+    sys.path.insert(0, os.getcwd())
     from RandomizeKaggleDB import read_json_DB
 
-    KAGGLEDB = read_json_DB(filepath="Randomized_Kaggle_Dataset_Subset_physics.json")
+    KAGGLEDB = read_json_DB(filepath=os.path.join("Data_Processing_Pipeline", "Randomized_Kaggle_Dataset_Subset_Physics.json"))
     ARXIV_IDS = list(KAGGLEDB.keys())
 
-    step_0 = step0_processing(target_name="Step_0", start_idx=0, window_size=100, end_idx=100)
+    step_0 = step0_processing(target_name=os.path.join("Data_Processing_Pipeline","Step_0"), start_idx=0, window_size=100, end_idx=100)
 
     # Create sliding window for step 0-2
     for i in range(step_0.rounds):

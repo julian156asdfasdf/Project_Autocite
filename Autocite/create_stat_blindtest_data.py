@@ -6,11 +6,12 @@ import numpy as np
 import pandas as pd
 import random
 import torch
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import DataLoader
 from tqdm.auto import tqdm
+import os
 
 # Import the necessary functions and classes
-from Autocite.Autocite import arXivDataset, Distance, TripletLoss, TripletModel, compute_topk_accuracy
+from Autocite import arXivDataset, Distance, TripletModel
 from baselines import PopularityModel
 
 if __name__ == '__main__':
@@ -69,11 +70,11 @@ if __name__ == '__main__':
 
     with open('TransformedRow_to_arXivID.pkl', 'rb') as f:
         reversed_mapping_dict = pickle.load(f)
-    DATASET = np.array(pd.read_pickle('Transformed_datasets_snowflake/transformed_dataset_snowflake.pkl'))[:20000]
+    DATASET = np.array(pd.read_pickle('transformed_dataset.pkl'))[:20000]
     train_size = int(len(DATASET) * 0.9)
     
     # define 30 random contexts
-    random_idx_30 = np.random.choice(range(train_size, len(DATASET)), 30, replace=False)
+    random_idx_30 = np.random.choice(range(train_size, len(DATASET)), 5, replace=False)
 
     # Define variables
     num_features = 768
@@ -85,12 +86,7 @@ if __name__ == '__main__':
     margin = 0.6
     top_k = 5
     
-
-    model_val_labels = False
-    if model_val_labels:
-        time_file_save = 'validationlabels_2024-06-15_12-55-23'
-    else:
-        time_file_save = '2024-06-15_12-59-14'
+    time_file_save = '2024-06-15_12-59-14'
 
     d_func = Distance.weighted_euclidean
 
@@ -172,7 +168,7 @@ if __name__ == '__main__':
                 print(f"{j_idx}: Model {j+1}, arXiv-ID: " + arXivID)
     
     # Save the result table
-    pickle.dump(result_table, open(f"result_table_stat_test.pkl", "wb"))
+    pickle.dump(result_table, open(os.path.join("Autocite","result_table_stat_test.pkl"), "wb"))
 
     # Return top 5 arXiv-IDS for the popularity model
     print(f"Popularity model top-{top_k} suggestions:")

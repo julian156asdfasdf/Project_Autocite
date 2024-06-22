@@ -67,11 +67,11 @@ def randomizeKaggleDB(filepath = "Kaggle_Dataset.json", categories = []):
     if len(categories) > 0:
         category_string = "_Subset_" + "_".join(categories)
      # Writing the randomized dataset to a new json file    
-    new_filepath = "Randomized_Kaggle_Dataset" + category_string + ".json"
+    new_filepath = "Data_Processing_Pipeline/Randomized_Kaggle_Dataset" + category_string + ".json"
     with open(new_filepath, 'w') as file:
         json.dump(LatexCleanedKaggleDB, file)
 
-def read_json_DB(filepath = "Randomized_Kaggle_Dataset_Subset_Physics.json"):
+def read_json_DB(filepath = "Data_Processing_Pipeline/Randomized_Kaggle_Dataset_Subset_Physics.json"):
     try:
         with open(filepath, 'r') as file:
             KaggleDB = json.load(file)
@@ -83,5 +83,5 @@ def read_json_DB(filepath = "Randomized_Kaggle_Dataset_Subset_Physics.json"):
 if __name__ == '__main__':
     categories = ['physics']
     randomizeKaggleDB(categories=categories)
-    KaggleDB = read_json_DB(filepath="Randomized_Kaggle_Dataset" + ("_Subset_" + "_".join(categories) if len(categories) > 0 else "") + ".json")
+    KaggleDB = read_json_DB(filepath="Data_Processing_Pipeline/Randomized_Kaggle_Dataset" + ("_Subset_" + "_".join(categories) if len(categories) > 0 else "") + ".json")
     pass

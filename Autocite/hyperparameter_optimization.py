@@ -5,7 +5,6 @@ import numpy as np
 import pandas as pd
 from torch.utils.data import DataLoader
 from tqdm.auto import tqdm
-import matplotlib.pyplot as plt
 import os
 import pickle
 
@@ -20,7 +19,7 @@ from optuna.trial import TrialState
 
 # --------------------------------------------------------------
 # Import the necessary functions and classes
-from Autocite.Autocite import arXivDataset, Distance, TripletLoss, TripletModel, compute_topk_accuracy
+from Autocite import arXivDataset, Distance, TripletLoss, TripletModel, compute_topk_accuracy
 # --------------------------------------------------------------
 
 
@@ -94,7 +93,6 @@ def objective(trial):
         # Store the loss, running loss and weights of batch and epoch    
             eopch_train_loss = np.append(eopch_train_loss, loss.item())
             running_train_loss = np.append(running_train_loss, loss.item())
-        running_weights[trial.number, :, epoch+1] = model.W.detach().numpy()
 
         # Validation of the model.
         if target_data == "Validation":
@@ -110,10 +108,6 @@ def objective(trial):
         # Handle pruning based on the intermediate value.
         if trial.should_prune():
             raise optuna.exceptions.TrialPruned()
-        
-        # Save the running weights
-        with open('running_weights_hyper_opt.pkl', 'wb') as f:
-            pickle.dump(running_weights, f)
 
         # Print the epoch statistics
         end_time = time.time()
@@ -190,7 +184,7 @@ if __name__ == "__main__":
     alpha_bound = [0.05, 1.5]
     distance_measures = ["weighted_squared_euclidean", "weighted_euclidean", "weighted_manhatten"] #, "weighted_cosine"]
     study_name = "Autocite_Hyperparam_Optim_Snowflake"
-    storage = "sqlite:///Autocite.db"
+    storage = "sqlite:///"+os.path.join("Autocite", "Autocite.db")
     continue_existing = True # Set to True if you want to continue an existing study with the same name and stored at the same location.
     n_trials = 40
 
@@ -198,7 +192,7 @@ if __name__ == "__main__":
     vector_embedding_model = 'Snowflake' # Choose from 'Snowflake', 'MiniLM'
 
     if vector_embedding_model == 'Snowflake':
-        transformed_dataset_filename_base = "Transformed_datasets_snowflake/transformed_dataset_snowflake_len5000_context.pkl"
+        transformed_dataset_filename_base = "transformed_dataset.pkl"
     elif vector_embedding_model == 'MiniLM':
         transformed_dataset_filename_base = "Transformed_datasets_minilm/transformed_dataset_length5000_contextsize.pkl"
     else:
@@ -228,21 +222,3 @@ if __name__ == "__main__":
     print("  Params: ")
     for key, value in best_trial.params.items():
         print("    {}: {}".format(key, value))
-    
-    # Plot the top-k accuracy for each trial
-    accuracies = np.array([])
-    for i, trial in enumerate(complete_trials):
-        accuracies = np.append(accuracies, trial.values[0])
-
-    fig, ax = plt.subplots()
-    plt.plot(accuracies)
-    plt.xlabel('Trial Number')
-    plt.ylabel('Learned Top-k Accuracy')
-    plt.title(f'Top-{top_k} Accuracy for each Trial')
-    plot_text = f'Number of epochs: {num_epochs}\nOptimizer: Adam\nLearning rate: {lr}\nTraining size: {int(dataset_size*train_test_split)}\nLoss function: Triplet Loss'
-    props = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
-    ax.text(0.45, 0.35, plot_text, transform=ax.transAxes, fontsize=14,
-    verticalalignment='top', bbox=props)
-    os.makedirs('Plots', exist_ok=True)
-    plt.savefig(f'Plots/hyper_opt_top_{top_k}_accuracy_{time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime())}.png')
-    plt.show()

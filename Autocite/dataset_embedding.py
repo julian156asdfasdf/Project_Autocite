@@ -1,9 +1,13 @@
 from sentence_transformers import SentenceTransformer
+import sys
+import os
+sys.path.insert(0, os.getcwd())
 from RandomizeKaggleDB import read_json_DB
 import pickle
 from tqdm.auto import tqdm
+import os
 
-id_to_abstract_path = 'arXivIDs_to_Abstract_Subset_physics.json'
+id_to_abstract_path = os.path.join('Autocite','arXivIDs_to_Abstract_Subset_physics.json')
 ARXIVID_TO_ABSTRACT = read_json_DB(filepath=id_to_abstract_path)
 
 def get_abstract_from_arxiv_id(arxiv_id: str) -> str:
@@ -58,7 +62,7 @@ def upload_dataset(transformed_dataset: str, filepath: str) -> str:
 
 if __name__ == '__main__':
     # Load the dataset
-    dataset = download_dataset('dataset.pkl')
+    dataset = download_dataset('dataset.pkl')[:10]
     if not dataset:
         exit()
     context_sizes = [1000]
@@ -67,5 +71,4 @@ if __name__ == '__main__':
         transformed_dataset_short_context = transform_dataset(dataset_short_context)
         if not transformed_dataset_short_context:
             exit()
-        upload_dataset(dataset_short_context, f'dataset_context{context_size}.pkl')
         upload_dataset(transformed_dataset_short_context, f'transformed_dataset.pkl')

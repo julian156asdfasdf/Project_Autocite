@@ -35,7 +35,7 @@ def create_arXivID_to_Abstract_DB(filepath = "Kaggle_Dataset.json", categories =
     if len(categories) > 0:
         category_string = "_Subset_" + "_".join(categories)
      # Writing the dictionary to a new json file    
-    new_filepath = "Autocite/arXivIDs_to_Abstract" + category_string + ".json"
+    new_filepath = os.path.join("Autocite", "arXivIDs_to_Abstract" + category_string + ".json")
     with open(new_filepath, 'w') as file:
         json.dump(ID_to_Abstract, file)
 
@@ -44,9 +44,10 @@ if __name__ == '__main__':
     from RandomizeKaggleDB import read_json_DB
     
     categories=['physics']
+    # create_arXivID_to_Abstract_DB(filepath = "Kaggle_Dataset.json", categories = categories)
     category_string = ""
     if len(categories) > 0:
         category_string = "_Subset_" + "_".join(categories)
         # Writing the randomized dataset to a new json file    
-    new_filepath = "Autocite/arXivIDs_to_Abstract" + category_string + ".json"
+    new_filepath = os.path.join("Autocite", "arXivIDs_to_Abstract" + category_string + ".json")
     AtoA = read_json_DB(new_filepath)

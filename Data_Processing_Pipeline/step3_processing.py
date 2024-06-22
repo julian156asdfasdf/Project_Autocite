@@ -1,10 +1,9 @@
 import sys
 import os
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+# sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.insert(0, os.getcwd())
 
-from pathlib import Path
-import pandas as pd
 import os
 from collections import defaultdict
 import re
@@ -20,7 +19,6 @@ from thefuzz import fuzz
 from tqdm.auto import tqdm
 
 ACCENT_CONVERTER_bad = LatexNodes2Text()
-
 
 def ACCENT_CONVERTER(text: str) -> str:
     """
@@ -324,7 +322,7 @@ class step3_processing:
             shutil.rmtree(os.path.join(self.file_dir, main_txt[:-4].split('/')[-1].split('\\')[-1]), ignore_errors=True)
         return None
 
-    def build_dataset(self, update: bool=True, context_size: int=500) -> None:
+    def build_dataset(self, update: bool=True, context_size: int=1000) -> None:
         """
         Builds the dataset.pkl file containing the context of each citation in the main.txt files.
 
@@ -378,7 +376,7 @@ class step3_processing:
 
 
 if __name__ == "__main__":
-    processing = step3_processing('Data_Processing_Pipeline\Step_2', 'dataset.pkl')
+    processing = step3_processing(os.path.join('Data_Processing_Pipeline','Step_2'), 'dataset2.pkl')
     authors = processing.create_author_dict()
     processing.ref_matcher()
     processing.build_dataset(update=True, context_size=1000)

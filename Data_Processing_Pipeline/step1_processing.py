@@ -34,7 +34,7 @@ def delete_empty_folders(root: str) -> set:
         if not any(files) and not still_has_subdirs:
             os.rmdir(current_dir)
             deleted.add(current_dir)
-    with open("Data_Processing_Pipeline/Manifests/deleted_empty_folders.txt", 'w') as f:
+    with open(os.path.join("Data_Processing_Pipeline","Manifests","deleted_empty_folders.txt"), 'w') as f:
         f.write(str(deleted))
     return deleted
 
@@ -71,12 +71,10 @@ class step1_processing:
                     # Open the tar file and extract its contents into the newly created directory
                     with tarfile.open(os.path.join(self.data, file_name), 'r') as tar:
                         tar.extractall(path=tar_dir_path)
-                    #os.remove(os.path.join(self.data, file_name))
-                    # print(f"{file_name} extracted successfully to {tar_dir_path}.")
-                except tarfile.ReadError as e:
-                    #  print(f"Error extracting {file_name}: {e}")
+
+                except:
                     unable_folder.add(file_name)
-        with open("tar_unable_folders.txt", 'w') as f: # Manifest file
+        with open(os.path.join("Data_Processing_Pipeline","Manifests","tar_unable_folders.txt"), 'a') as f: # Manifest file
             f.write(str(unable_folder))
         return unable_folder    
 
@@ -109,7 +107,7 @@ class step1_processing:
 
 
 if __name__ == "__main__":
-    process = step1_processing("Data_Processing_Pipeline/Step_0", "Data_Processing_Pipeline/Step_1")
+    process = step1_processing(os.path.join("Data_Processing_Pipeline","Step_0"), os.path.join("Data_Processing_Pipeline","Step_1"))
     process.create_target_folder()
     process.tar_extractor()
-    process.rmv_irrelevant_files(manifest_title="manifest.txt")
+    process.rmv_irrelevant_files(manifest_title=os.path.join("Data_Processing_Pipeline","Manifests","manifest.txt"))

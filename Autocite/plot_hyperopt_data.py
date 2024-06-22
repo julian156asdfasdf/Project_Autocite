@@ -2,10 +2,11 @@
 
 import optuna
 import matplotlib.pyplot as plt
+import os
 
 # The study must exist in this place (using Optuna Dashboard)
 study_name = "Autocite_Hyperparam_Optim_Snowflake"
-storage = "sqlite:///Autocite.db"
+storage = "sqlite:///"+os.path.join("Autocite", "Autocite.db")
 study = optuna.load_study(study_name=study_name, storage=storage)
 
 param_importance = optuna.importance.get_param_importances(study)

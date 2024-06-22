@@ -2,21 +2,15 @@
 # Requires the pytorch_model.py file to be in the same directory.
 # Requires the dataset file to be created with the given embedder and in the stated subdirectory.
 
-import time
 import random
 import torch
 import numpy as np
 import pandas as pd
-import os
-import matplotlib.pyplot as plt
-import torch.nn as nn
-import torch.optim as optim
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import DataLoader
 from tqdm.auto import tqdm
-from typing import Any, Callable
 import operator
 
-from Autocite.Autocite import compute_topk_accuracy, arXivDataset, TripletModel, Distance
+from Autocite import compute_topk_accuracy, arXivDataset, TripletModel, Distance
 
 
 class PopularityModel():
@@ -58,8 +52,7 @@ class PopularityModel():
         return self.top_k_labels_dict
 
 if __name__ == '__main__':
-    embedder = "mpnet"
-    DATASET = np.array(pd.read_pickle(f'Transformed_datasets_{embedder}/transformed_dataset_{embedder}.pkl'))[:20000]
+    DATASET = np.array(pd.read_pickle(f'transformed_dataset.pkl'))[:20000]
 
     # Define the device
     # MPS is only faster for very large tensors/batch sizes
