@@ -16,7 +16,7 @@ from tqdm.auto import tqdm
 from typing import Any, Callable
 import operator
 
-from pytorch_model import compute_topk_accuracy, arXivDataset, TripletModel, Distance
+from Autocite.Autocite import compute_topk_accuracy, arXivDataset, TripletModel, Distance
 
 
 class PopularityModel():

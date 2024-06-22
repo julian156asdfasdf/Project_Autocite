@@ -3,7 +3,7 @@ import json
 import re
 from tqdm.auto import tqdm
 
-from parseBBL2 import remove_latex_commands
+from Data_Processing_Pipeline.parseBBL import remove_latex_commands
 
 # Process the dictionary
 def extract_info_title_authors(dictionary):

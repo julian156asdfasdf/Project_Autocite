@@ -4,9 +4,9 @@ import pickle
 from tqdm.auto import tqdm
 
 # Load data
-with open('Transformed_datasets_snowflake/transformed_dataset_snowflake.pkl', 'rb') as file:
+with open('transformed_dataset.pkl', 'rb') as file:
     dataset_transformed = pickle.load(file)
-with open('dataset_snowflake.pkl', 'rb') as file:
+with open('dataset.pkl', 'rb') as file:
     dataset = pickle.load(file)
 
 assert len(dataset) == len(dataset_transformed)

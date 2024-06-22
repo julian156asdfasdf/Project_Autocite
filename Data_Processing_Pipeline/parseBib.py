@@ -1,7 +1,7 @@
 import bibtexparser
 import re
 from bibtexparser.bparser import BibTexParser
-from parseBBL2 import remove_latex_commands
+from parseBBL import remove_latex_commands
 
 parser = BibTexParser(common_strings=False)
 parser.ignore_nonstandard_types = False

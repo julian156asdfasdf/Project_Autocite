@@ -20,7 +20,7 @@ from optuna.trial import TrialState
 
 # --------------------------------------------------------------
 # Import the necessary functions and classes
-from pytorch_model import arXivDataset, Distance, TripletLoss, TripletModel, compute_topk_accuracy
+from Autocite.Autocite import arXivDataset, Distance, TripletLoss, TripletModel, compute_topk_accuracy
 # --------------------------------------------------------------
 
 

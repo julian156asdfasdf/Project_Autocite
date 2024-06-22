@@ -1,4 +1,8 @@
-from step3_processing import ACCENT_CONVERTER
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from Data_Processing_Pipeline.step3_processing import ACCENT_CONVERTER # Import useful function from the step3 file
+
 from tqdm.auto import tqdm
 import json
 
@@ -31,10 +35,9 @@ def create_arXivID_to_Abstract_DB(filepath = "Kaggle_Dataset.json", categories =
     if len(categories) > 0:
         category_string = "_Subset_" + "_".join(categories)
      # Writing the dictionary to a new json file    
-    new_filepath = "arXivIDs to Abstract" + category_string + ".json"
+    new_filepath = "Autocite/arXivIDs_to_Abstract" + category_string + ".json"
     with open(new_filepath, 'w') as file:
         json.dump(ID_to_Abstract, file)
-
 
 
 if __name__ == '__main__':
@@ -45,5 +48,5 @@ if __name__ == '__main__':
     if len(categories) > 0:
         category_string = "_Subset_" + "_".join(categories)
         # Writing the randomized dataset to a new json file    
-    new_filepath = "arXivIDs to Abstract" + category_string + ".json"
+    new_filepath = "Autocite/arXivIDs_to_Abstract" + category_string + ".json"
     AtoA = read_json_DB(new_filepath)

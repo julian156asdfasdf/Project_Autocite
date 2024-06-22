@@ -34,7 +34,7 @@ def delete_empty_folders(root: str) -> set:
         if not any(files) and not still_has_subdirs:
             os.rmdir(current_dir)
             deleted.add(current_dir)
-    with open("output_deleted_empty_folders.txt", 'w') as f:
+    with open("Data_Processing_Pipeline/Manifests/deleted_empty_folders.txt", 'w') as f:
         f.write(str(deleted))
     return deleted
 
@@ -76,7 +76,7 @@ class step1_processing:
                 except tarfile.ReadError as e:
                     #  print(f"Error extracting {file_name}: {e}")
                     unable_folder.add(file_name)
-        with open("output_tar_unable_folders.txt", 'w') as f:
+        with open("tar_unable_folders.txt", 'w') as f: # Manifest file
             f.write(str(unable_folder))
         return unable_folder    
 
@@ -103,15 +103,13 @@ class step1_processing:
                     #print(f"Removed non-tex file: {file_path}")
         delete_empty_folders(self.target) #####
         
-        with open(manifest_title, 'w') as f:
+        with open(manifest_title, 'w') as f: # Manifest file
             f.write(tabulate.tabulate(del_dict, headers='keys'))
         return del_dict
-    
-
 
 
 if __name__ == "__main__":
-    process = step1_processing("Step_0", "Step_1")
+    process = step1_processing("Data_Processing_Pipeline/Step_0", "Data_Processing_Pipeline/Step_1")
     process.create_target_folder()
     process.tar_extractor()
     process.rmv_irrelevant_files(manifest_title="manifest.txt")

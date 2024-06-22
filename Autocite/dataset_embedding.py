@@ -3,7 +3,7 @@ from RandomizeKaggleDB import read_json_DB
 import pickle
 from tqdm.auto import tqdm
 
-id_to_abstract_path = 'arXivIDs to Abstract_Subset_physics.json'
+id_to_abstract_path = 'arXivIDs_to_Abstract_Subset_physics.json'
 ARXIVID_TO_ABSTRACT = read_json_DB(filepath=id_to_abstract_path)
 
 def get_abstract_from_arxiv_id(arxiv_id: str) -> str:
@@ -12,14 +12,14 @@ def get_abstract_from_arxiv_id(arxiv_id: str) -> str:
     """
     return ARXIVID_TO_ABSTRACT[arxiv_id]
 
-def transform_dataset(dataset: list, transformer: str="sentence-transformers/all-MiniLM-L6-v2"
+def transform_dataset(dataset: list, transformer: str="Snowflake/snowflake-arctic-embed-m"
 ) -> list | None:
     """
     Takes the dataset in the form:
     dataset:    |Article ArXiV ID | Reference ArXiV ID | context |
 
     and a transformer which is the name of the transformer model to be used.
-    default for transformer: 'sentence-transformers/all-MiniLM-L6-v2'
+    default for transformer: 'Snowflake/snowflake-arctic-embed-m'
 
     Returns the vector embedded dataset in the form:
     transformed_dataset: | transformed context | transformed abstract |
@@ -68,9 +68,4 @@ if __name__ == '__main__':
         if not transformed_dataset_short_context:
             exit()
         upload_dataset(dataset_short_context, f'dataset_context{context_size}.pkl')
-        upload_dataset(transformed_dataset_short_context, f'transformed_dataset_MiniLM_context{context_size}.pkl')
-    #transformed_dataset = transform_dataset(dataset)
-    #if not transformed_dataset:
-    #    exit()
-    #upload_dataset(transformed_dataset, 'transformed_dataset.pkl')
-    
+        upload_dataset(transformed_dataset_short_context, f'transformed_dataset.pkl')

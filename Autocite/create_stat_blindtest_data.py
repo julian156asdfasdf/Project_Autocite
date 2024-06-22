@@ -1,7 +1,6 @@
 # Run this to get the top-5 arXiv-IDs for the 30 contexts in the blind test for each of the models
 # Requires the dataset file to be created with the snowflake embedder and in the stated subdirectory.
 
-
 import pickle
 import numpy as np
 import pandas as pd
@@ -11,7 +10,7 @@ from torch.utils.data import DataLoader, Dataset
 from tqdm.auto import tqdm
 
 # Import the necessary functions and classes
-from pytorch_model import arXivDataset, Distance, TripletLoss, TripletModel, compute_topk_accuracy
+from Autocite.Autocite import arXivDataset, Distance, TripletLoss, TripletModel, compute_topk_accuracy
 from baselines import PopularityModel
 
 if __name__ == '__main__':

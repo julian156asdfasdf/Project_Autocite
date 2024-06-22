@@ -6,7 +6,7 @@ from pathlib import Path
 import re
 import shutil
 from parseBib import parseBib
-from parseBBL2 import *
+from parseBBL import *
 from tqdm.auto import tqdm
 
 class step2_processing:
@@ -93,12 +93,10 @@ class step2_processing:
                             doc_class_n += 1
                             doc_main = content
                 except:
-                    # print(f"Error reading file in merge_tex_files: {file}")
                     # Delete the folder if there is an error reading a file in it
                     return None, None 
         # If there is not 1 \documentclass in the folder, print an error and continue to the next folder
         if doc_class_n != 1:
-            # print(f"Warning (can be ignored): {doc_class_n} \documentclass in {root}. Must be 1.")
             # Delete the folder if there is an error reading a file in it
             return None, None
 
@@ -194,42 +192,6 @@ class step2_processing:
         return doc_contents
 
 
-    def move_references(self) -> None:
-        """
-        Copies the references of .bbl and .bib files already in the self.data directory
-        into the step_2 directory and renames them as ref.bbl or ref.bib depending on the format.
-
-        Arguments:
-            None
-
-        Returns:
-            None
-        """
-
-        count = 0
-        base_folder = os.path.dirname(self.data)
-        step_2_folder = os.path.join(base_folder, self.target)
-        for root, dirs, files in os.walk(self.data):
-            i_bib = 1
-            i_bbl = 1
-            for file in files:
-                if file.lower().endswith((".bbl", ".bib")):
-                    source_path = os.path.join(root, file)
-                    destination_folder = os.path.join(step_2_folder, os.path.relpath(root, self.data))
-                    os.makedirs(destination_folder, exist_ok=True)
-                    if file.lower().endswith(".bbl"):
-                        new_file_name = f"ref_{i_bbl}.bbl"
-                        destination_path = os.path.join(destination_folder, new_file_name)
-                        i_bbl += 1
-                    elif file.lower().endswith(".bib"):
-                        new_file_name = f"ref_{i_bib}.bib"
-                        destination_path = os.path.join(destination_folder, new_file_name)
-                        i_bib += 1
-                    shutil.copy(source_path, destination_path)
-                    count += 1
-        # print(f"Moved {count} already established references to {self.target} folder")
-
-
     def create_main_txt(self) -> None:
         """
         Creates a main.txt file for each paper in the self.data directory into the self.target directory.
@@ -279,9 +241,8 @@ class step2_processing:
             try:
                 text_content = f.read()
             except UnicodeDecodeError:
-                #  print(f"Error reading file: {file}")
                 return "" # Return empty string if there is an error reading the file
-       
+
         # Find the start and end indices of the bibliography section
         start_index = text_content.find(r"\begin{thebibliography}")
         end_index = text_content.find(r"\end{thebibliography}")
@@ -307,6 +268,7 @@ class step2_processing:
 
         base_folder = os.path.dirname(self.data)
         step_2_folder = os.path.join(base_folder, self.target)
+        step_2_folder = self.target
         # Walk through directory
         for dir in tqdm(os.listdir(self.data), desc="Creating references.json files", leave=False):
             if dir == '.DS_Store':
@@ -366,7 +328,7 @@ class step2_processing:
 
 
 if __name__ == "__main__":
-    process = step2_processing("Step_1", "Step_2")
+    process = step2_processing("Data_Processing_Pipeline/Step_1", "Step_2")
     process.create_target_folder()
     process.create_main_txt()
     process.create_references_json()

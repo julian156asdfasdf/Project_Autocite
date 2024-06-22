@@ -235,26 +235,3 @@ def parsebbl(file_path = None, bbl_str = None):
         bbl_dict[ref_name] = {"title":None, "info": info, "author_ln": first_author_lastname, "ArXiV-ID": arxiv_id}
 
     return bbl_dict
-
-
-if __name__ == "__main__":
-    import time
-    # All the test files
-    filepaths = [
-        "Step_1/1403.1499/Manuscript.tex"
-    ]
-    bbl_dict = {}
-    t0 = time.time()
-    for file_path in filepaths:
-        print(f"\n{file_path}")
-        bbl_dict.update(parsebbl(file_path=file_path))
-    seconds = time.time() - t0
-    print("\n")
-    
-    bad_authors = []
-    for key, value in bbl_dict.items():
-        print(f"{key=}, {value['author_ln']=}, {value['info'][:30]}")
-        if value["author_ln"] is None:
-            bad_authors.append(key)
-    print(f"\nTime taken to process {len(filepaths)} bbl/tex files:", seconds)
-    print(f"\nNo authors: {bad_authors}")
